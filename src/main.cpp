@@ -11,6 +11,7 @@ void setup()
     Serial.begin(115200);
 
     Si446x_init();
+    Si446x_setTxPower(SI446X_MAX_TX_POWER);
 }
 
 void loop()
