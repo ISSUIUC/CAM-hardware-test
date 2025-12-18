@@ -27,10 +27,9 @@ void setup()
     delay(50);
     SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
 
-    if (!radio.init()) {
+    while (!radio.init()) {
         Serial.println("Radio failed to init");
-        while(1) {};
-
+        delay(500);
     }
 
     // if(!radio.setFrequency(430)) {
@@ -52,6 +51,8 @@ typedef struct {
     uint8_t a;
     uint8_t b;
 } packet_t;
+
+bool led_state = false;
 
 void loop()
 {
@@ -112,15 +113,18 @@ void loop()
     }
     if(radio.waitPacketSent(200)) {
         // Serial.println("Packet sent!");
+        Serial.print('.');
+        led_state = !led_state;
+        digitalWrite(LED_PIN, led_state);
 
     } else {
-        digitalWrite(LED_PIN, HIGH);
-        delay(20);
-        digitalWrite(LED_PIN, LOW);
-        delay(20);
+        // digitalWrite(LED_PIN, HIGH);
+        // delay(20);
+        // digitalWrite(LED_PIN, LOW);
+        // delay(20);
         Serial.println("Packet send fail");
     }
 
-    // delay(2);
+    delay(1);
     #endif
 }
