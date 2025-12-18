@@ -1,12 +1,18 @@
 #include <Arduino.h>
 #include <pins.h>
 
-void setup() {
-    Serial.begin(115200);
-    while (!Serial) {}
+const int LED_PIN = 51;
+
+void setup()
+{
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);
 }
 
-void loop() {
-    Serial.println("Hello from ESP32-P4!");
-    delay(100);
+void loop()
+{
+    digitalWrite(LED_PIN, HIGH);
+    delay(500);
+    digitalWrite(LED_PIN, LOW);
+    delay(500);
 }
