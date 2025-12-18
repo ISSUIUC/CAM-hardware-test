@@ -33,15 +33,19 @@ void setup()
 
     }
 
-    if(!radio.setFrequency(430)) {
-        Serial.println("Failed to set radio freq");
-        while(1) {};
-    }
+    // if(!radio.setFrequency(430)) {
+    //     Serial.println("Failed to set radio freq");
+    //     while(1) {};
+    // }
 
 
     Serial.println("Radio set up!");
-    radio.setTxPower(0x7F);
+    // radio.setTxPower(0x20);
 
+
+    // radio.printRegisters();
+
+    // while(1) {};
 }
 
 typedef struct {
@@ -102,18 +106,21 @@ void loop()
     uint8_t buf[8];
     memcpy(buf, &a, sizeof(packet_t));
 
-    radio.send(buf, sizeof(packet_t));
+    // Serial.println("Attemping to queue msg..");
+    if(radio.send(buf, sizeof(packet_t))) {
+        // Serial.println("MSG queued correctly");
+    }
     if(radio.waitPacketSent(200)) {
-        Serial.println("Packet sent!");
+        // Serial.println("Packet sent!");
+
+    } else {
         digitalWrite(LED_PIN, HIGH);
         delay(20);
         digitalWrite(LED_PIN, LOW);
         delay(20);
-
-    } else {
         Serial.println("Packet send fail");
     }
 
-    delay(2);
+    // delay(2);
     #endif
 }

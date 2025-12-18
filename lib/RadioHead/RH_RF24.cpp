@@ -10,7 +10,9 @@
 // or generate a custom one with WDS and include it here
 // See RF24configs/README for file name encoding standard
 //#include "RF24configs/radio_config_Si4464_27_434_2GFSK_5_10.h"
-#include "RF24configs/radio_config_Si4464_30_434_2GFSK_5_10.h"
+// #include "RF24configs/radio_config_Si4464_30_434_2GFSK_5_10.h"
+//#include "RF24configs/radio_config_Si4463_30_434_4GFSK_1000_7.h"
+#include "RF24configs/radio_config_Si4463.h"
 //#include "RF24configs/radio_config_Si4464_30_434_2GFSK_10_20.h"
 //#include "RF24configs/radio_config_Si4464_30_915_2GFSK_5_10.h"
 //#include "RF24configs/radio_config_Si4464_30_915_2GFSK_10_20.h"
