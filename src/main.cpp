@@ -23,11 +23,14 @@ void setup()
     digitalWrite(LED_PIN, LOW);
     Serial.begin(115200);
 
-    while(!Serial) {};
+    while (!Serial)
+    {
+    };
     delay(50);
     SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
 
-    while (!radio.init()) {
+    while (!radio.init())
+    {
         Serial.println("Radio failed to init");
         delay(500);
     }
@@ -37,31 +40,36 @@ void setup()
     //     while(1) {};
     // }
 
-
     Serial.println("Radio set up!");
     // radio.setTxPower(0x20);
-
 
     // radio.printRegisters();
 
     // while(1) {};
 }
 
-typedef struct {
+typedef struct
+{
     uint8_t a;
     uint8_t b;
 } packet_t;
 
 bool led_state = false;
+long t1 = 0;
+long t2 = 0;
+bool alternate = true;
 
 void loop()
 {
-    #ifdef IS_EAGLE
+#ifdef IS_EAGLE
+    // Serial.println(radio.available());
 
-    if(radio.available()) {
+    if (radio.available())
+    {
         uint8_t buf[8];
         uint8_t len = sizeof(packet_t);
-        if(radio.recv(buf, &len)) {
+        if (radio.recv(buf, &len))
+        {
             packet_t in_pkt;
             memcpy(&in_pkt, buf, sizeof(packet_t));
             Serial.println("Received!");
@@ -71,34 +79,39 @@ void loop()
             Serial.println(";");
         }
 
+        // Serial.println("rdy");
+        //     uint8_t buf[10];
+        //     memcpy(buf, &a, sizeof(packet_t));
+        //     radio.send(buf, sizeof(packet_t));
 
+        //     Serial.print("Sending...");
+        //     if(radio.waitPacketSent(200)) {
+        //         Serial.println("Sent successfully!");
+        //         digitalWrite(LED_PIN, HIGH);
+        //         delay(50);
+        //         digitalWrite(LED_PIN, LOW);
+        //         delay(50);
+        //     }
+        if (alternate)
+        {
+            t1 = micros();
+            Serial.println(t1 - t2);
+        }
+        else
+        {
+            t2 = micros();
+            Serial.println(t2 - t1);
+        }
 
-        Serial.println("rdy");
-    //     uint8_t buf[10];
-    //     memcpy(buf, &a, sizeof(packet_t));
-    //     radio.send(buf, sizeof(packet_t));
-
-    //     Serial.print("Sending...");
-    //     if(radio.waitPacketSent(200)) {
-    //         Serial.println("Sent successfully!");
-    //         digitalWrite(LED_PIN, HIGH);
-    //         delay(50);
-    //         digitalWrite(LED_PIN, LOW);
-    //         delay(50);
-    //     }
-
+        alternate = !alternate;
     }
 
     // Serial.println("loop");
     // SPI.transfer(0xAF);
     delay(2);
-    #endif
+#endif
 
-
-
-
-
-    #ifdef IS_CAM
+#ifdef IS_CAM
 
     packet_t a;
 
@@ -108,16 +121,19 @@ void loop()
     memcpy(buf, &a, sizeof(packet_t));
 
     // Serial.println("Attemping to queue msg..");
-    if(radio.send(buf, sizeof(packet_t))) {
+    if (radio.send(buf, sizeof(packet_t)))
+    {
         // Serial.println("MSG queued correctly");
     }
-    if(radio.waitPacketSent(200)) {
+    if (radio.waitPacketSent(200))
+    {
         // Serial.println("Packet sent!");
         Serial.print('.');
         led_state = !led_state;
         digitalWrite(LED_PIN, led_state);
-
-    } else {
+    }
+    else
+    {
         // digitalWrite(LED_PIN, HIGH);
         // delay(20);
         // digitalWrite(LED_PIN, LOW);
@@ -126,5 +142,5 @@ void loop()
     }
 
     delay(1);
-    #endif
+#endif
 }
