@@ -1,17 +1,47 @@
 #include <Arduino.h>
 #include <pins.h>
-#include <Si446x.h>
+#include <SPI.h>
+#include <RH_RF24.h>
+#include <RHSoftwareSPI.h>
+#include <RHHardwareSPI.h>
 
+// RHSoftwareSPI _rspi;
+RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
+
+#ifdef IS_CAM
 const int LED_PIN = 51;
+#endif
+
+#ifdef IS_EAGLE
+const int LED_PIN = 22;
+#endif
 
 void setup()
 {
+
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, LOW);
     Serial.begin(115200);
 
-    // Si446x_init();
-    // Si446x_setTxPower(SI446X_MAX_TX_POWER);
+    while(!Serial) {};
+    delay(50);
+    SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
+
+    if (!radio.init()) {
+        Serial.println("Radio failed to init");
+        while(1) {};
+
+    }
+
+    // if(!radio.setFrequency(430)) {
+    //     Serial.println("Failed to set radio freq");
+    //     while(1) {};
+    // }
+
+
+    // Serial.println("Radio set up!");
+    // radio.setTxPower(0x00);
+
 }
 
 typedef struct {
@@ -26,10 +56,25 @@ void loop()
     a.a = 10;
     a.b = 20;
 
-    // Si446x_TX(&a, sizeof(a), 20, SI446X_STATE_RX);
-    Serial.println("HIII");
-    digitalWrite(LED_PIN, HIGH);
-    delay(500);
-    digitalWrite(LED_PIN, LOW);
-    delay(500);
+    if(radio.available()) {
+
+        Serial.println("rdy");
+    //     uint8_t buf[10];
+    //     memcpy(buf, &a, sizeof(packet_t));
+    //     radio.send(buf, sizeof(packet_t));
+
+    //     Serial.print("Sending...");
+    //     if(radio.waitPacketSent(200)) {
+    //         Serial.println("Sent successfully!");
+    //         digitalWrite(LED_PIN, HIGH);
+    //         delay(50);
+    //         digitalWrite(LED_PIN, LOW);
+    //         delay(50);
+    //     }
+
+    }
+
+    // Serial.println("loop");
+    // SPI.transfer(0xAF);
+    delay(50);
 }
