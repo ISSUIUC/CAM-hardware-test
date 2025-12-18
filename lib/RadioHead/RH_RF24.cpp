@@ -12,7 +12,14 @@
 // #include "RF24configs/radio_config_Si4464_27_434_2GFSK_5_10.h"
 // #include "RF24configs/radio_config_Si4464_30_434_2GFSK_5_10.h"
 // #include "RF24configs/radio_config_Si4463_30_434_4GFSK_1000_7.h"
+#ifdef IS_CAM
 #include "RF24configs/radio_config_Si4463.h"
+#endif
+
+#ifdef IS_EAGLE
+#include "RF24configs/radio_config_Si4463_rx.h"
+#endif
+
 // #include "RF24configs/radio_config_Si4464_30_434_2GFSK_10_20.h"
 // #include "RF24configs/radio_config_Si4464_30_915_2GFSK_5_10.h"
 // #include "RF24configs/radio_config_Si4464_30_915_2GFSK_10_20.h"
