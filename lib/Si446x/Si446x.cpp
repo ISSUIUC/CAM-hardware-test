@@ -472,16 +472,17 @@ static void applyStartupConfig(void)
 	}
 }
 
-void Si446x_init(uint8_t nSEL, uint8_t nIRQ, uint8_t SDN)
+void Si446x_init()
 {
 	spiDeselect();
 #ifdef ARDUINO
-	pinMode(nSEL, OUTPUT);
-	pinMode(SDN, OUTPUT);
+	pinMode(SI446X_CSN, OUTPUT);
+	pinMode(SI446X_SDN, OUTPUT);
 #if SI446X_IRQ != -1
-	pinMode(nIRQ, INPUT_PULLUP);
+	pinMode(SI446X_IRQ, INPUT_PULLUP);
 #endif
-
+	
+	SPI.begin();
 #else
 	CSN_DDR |= _BV(CSN_BIT);
 	SDN_DDR |= _BV(SDN_BIT);
