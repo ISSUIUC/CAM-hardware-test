@@ -33,14 +33,14 @@ void setup()
 
     }
 
-    // if(!radio.setFrequency(430)) {
-    //     Serial.println("Failed to set radio freq");
-    //     while(1) {};
-    // }
+    if(!radio.setFrequency(430)) {
+        Serial.println("Failed to set radio freq");
+        while(1) {};
+    }
 
 
-    // Serial.println("Radio set up!");
-    // radio.setTxPower(0x00);
+    Serial.println("Radio set up!");
+    radio.setTxPower(0x7F);
 
 }
 
@@ -51,12 +51,22 @@ typedef struct {
 
 void loop()
 {
-    packet_t a;
-
-    a.a = 10;
-    a.b = 20;
+    #ifdef IS_EAGLE
 
     if(radio.available()) {
+        uint8_t buf[8];
+        uint8_t len = sizeof(packet_t);
+        if(radio.recv(buf, &len)) {
+            packet_t in_pkt;
+            memcpy(&in_pkt, buf, sizeof(packet_t));
+            Serial.println("Received!");
+            Serial.print(in_pkt.a);
+            Serial.print("  ");
+            Serial.print(in_pkt.b);
+            Serial.println(";");
+        }
+
+
 
         Serial.println("rdy");
     //     uint8_t buf[10];
@@ -76,5 +86,34 @@ void loop()
 
     // Serial.println("loop");
     // SPI.transfer(0xAF);
-    delay(50);
+    delay(2);
+    #endif
+
+
+
+
+
+    #ifdef IS_CAM
+
+    packet_t a;
+
+    a.a = 10;
+    a.b = 20;
+    uint8_t buf[8];
+    memcpy(buf, &a, sizeof(packet_t));
+
+    radio.send(buf, sizeof(packet_t));
+    if(radio.waitPacketSent(200)) {
+        Serial.println("Packet sent!");
+        digitalWrite(LED_PIN, HIGH);
+        delay(20);
+        digitalWrite(LED_PIN, LOW);
+        delay(20);
+
+    } else {
+        Serial.println("Packet send fail");
+    }
+
+    delay(2);
+    #endif
 }
