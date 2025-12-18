@@ -1,13 +1,16 @@
 #include <Arduino.h>
 #include <pins.h>
+#include <Si446x/Si446x.h>
 
-const int LED_PIN = 23;
+const int LED_PIN = 51;
 
 void setup()
 {
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, LOW);
     Serial.begin(115200);
+
+    Si446x_init();
 }
 
 void loop()
