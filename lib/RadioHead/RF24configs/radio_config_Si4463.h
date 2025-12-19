@@ -147,7 +147,7 @@
 // Descriptions:
 //   PKT_CONFIG1 - General configuration bits for transmission or reception of a packet.
 */
-#define RF_PKT_CONFIG1_1 0x11, 0x12, 0x01, 0x06, 0x22
+#define RF_PKT_CONFIG1_1 0x11, 0x12, 0x01, 0x06, 0x02
 
 /*
 // Set properties:           RF_PKT_FIELD_1_CONFIG_1
@@ -158,7 +158,7 @@
 // Descriptions:
 //   PKT_FIELD_1_CONFIG - General data processing and packet configuration bits for Field 1.
 */
-#define RF_PKT_FIELD_1_CONFIG_1 0x11, 0x12, 0x01, 0x0F, 0x14
+#define RF_PKT_FIELD_1_CONFIG_1 0x11, 0x12, 0x01, 0x0F, 0x04
 
 /*
 // Set properties:           RF_MODEM_MOD_TYPE_12
