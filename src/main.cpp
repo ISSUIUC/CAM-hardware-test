@@ -72,43 +72,18 @@ void loop()
         {
             packet_t in_pkt;
             memcpy(&in_pkt, buf, sizeof(packet_t));
-            Serial.println("Received!");
+            Serial.print("Received!  ");
             Serial.print(in_pkt.a);
             Serial.print("  ");
             Serial.print(in_pkt.b);
             Serial.println(";");
         }
 
-        // Serial.println("rdy");
-        //     uint8_t buf[10];
-        //     memcpy(buf, &a, sizeof(packet_t));
-        //     radio.send(buf, sizeof(packet_t));
-
-        //     Serial.print("Sending...");
-        //     if(radio.waitPacketSent(200)) {
-        //         Serial.println("Sent successfully!");
-        //         digitalWrite(LED_PIN, HIGH);
-        //         delay(50);
-        //         digitalWrite(LED_PIN, LOW);
-        //         delay(50);
-        //     }
-        if (alternate)
-        {
-            t1 = micros();
-            Serial.println(t1 - t2);
-        }
-        else
-        {
-            t2 = micros();
-            Serial.println(t2 - t1);
-        }
-
-        alternate = !alternate;
     }
 
     // Serial.println("loop");
     // SPI.transfer(0xAF);
-    delay(2);
+    delay(1);
 #endif
 
 #ifdef IS_CAM
