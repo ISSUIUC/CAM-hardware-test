@@ -1,12 +1,16 @@
 #include <Arduino.h>
 #include <pins.h>
 #include <SPI.h>
+#include <Wire.h>
 #include <RH_RF24.h>
 #include <RHSoftwareSPI.h>
 #include <RHHardwareSPI.h>
+#include <tvp5151.h>
 
 // RHSoftwareSPI _rspi;
-RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
+// RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
+
+tvp5151 tvp(TVP5151_PDN, TVP5151_RESET, TVP5151_ADDR, &Wire);
 
 #ifdef IS_CAM
 const int LED_PIN = 51;
@@ -23,99 +27,65 @@ void setup()
     digitalWrite(LED_PIN, LOW);
     Serial.begin(115200);
 
-    while (!Serial)
-    {
-    };
-    delay(50);
-    SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
+    Wire.begin(I2C_SDA, I2C_SCL);
 
-    while (!radio.init())
-    {
-        Serial.println("Radio failed to init");
-        delay(500);
-    }
+    // while (!Serial)
+    // {
+    // };
+    // delay(10);
+    Serial.println("init");
+    tvp.init();
+    // SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
 
-    // if(!radio.setFrequency(430)) {
-    //     Serial.println("Failed to set radio freq");
-    //     while(1) {};
-    // }
 
-    Serial.println("Radio set up!");
-    // radio.setTxPower(0x20);
-
-    // radio.printRegisters();
-
-    // while(1) {};
 }
-
-typedef struct
-{
-    uint8_t a;
-    uint8_t b;
-} packet_t;
-
-bool led_state = false;
-long t1 = 0;
-long t2 = 0;
-bool alternate = true;
 
 void loop()
 {
-#ifdef IS_EAGLE
-    // Serial.println(radio.available());
-
-    if (radio.available())
-    {
-        uint8_t buf[8];
-        uint8_t len = sizeof(packet_t);
-        if (radio.recv(buf, &len))
-        {
-            packet_t in_pkt;
-            memcpy(&in_pkt, buf, sizeof(packet_t));
-            Serial.print("Received!  ");
-            Serial.print(in_pkt.a);
-            Serial.print("  ");
-            Serial.print(in_pkt.b);
-            Serial.println(";");
-        }
-
-    }
-
-    // Serial.println("loop");
-    // SPI.transfer(0xAF);
-    delay(1);
-#endif
 
 #ifdef IS_CAM
+    Serial.println("Requesting device ID from 0x5C...");
+    Serial.print("Device ID response: 0x");
+    Serial.println(tvp.read_device_id(), HEX);
 
-    packet_t a;
+    // Wire.beginTransmission(0x40);
+    // Wire.write(0x05);
+    // if(Wire.endTransmission(true)) {
+    //     Serial.println(":(");
+    //     return;
+    // }
 
-    a.a = 10;
-    a.b = 20;
-    uint8_t buf[8];
-    memcpy(buf, &a, sizeof(packet_t));
+    // Wire.requestFrom(0x40, 2);
+    // int a = Wire.read();
+    // int b = Wire.read();
+    // Serial.println("ok!");
+    // Serial.println(((a<<8) + b) * 0.003125);
 
-    // Serial.println("Attemping to queue msg..");
-    if (radio.send(buf, sizeof(packet_t)))
-    {
-        // Serial.println("MSG queued correctly");
-    }
-    if (radio.waitPacketSent(200))
-    {
-        // Serial.println("Packet sent!");
-        Serial.print('.');
-        led_state = !led_state;
-        digitalWrite(LED_PIN, led_state);
-    }
-    else
-    {
-        // digitalWrite(LED_PIN, HIGH);
-        // delay(20);
-        // digitalWrite(LED_PIN, LOW);
-        // delay(20);
-        Serial.println("Packet send fail");
-    }
+    // 3.125 mV/LSB
 
-    delay(1);
+    // scan
+
+    // Serial.println("SCAN: ----");
+    // for(uint8_t i = 1; i < 0xFF; i++) {
+
+    //     Wire.beginTransmission(i);
+    //     uint8_t errn = Wire.endTransmission();
+
+    //     if (errn == 0) {
+    //         Serial.print("I2C DETECT: 0x");
+    //         Serial.println(i, HEX);
+    //     }
+
+    //     delay(2);
+
+    // }
+    // Serial.println("END SCAN ----");
+
+
+
+
+
+    // Serial.println("loop");
+    delay(500);
 #endif
 }

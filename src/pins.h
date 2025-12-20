@@ -7,6 +7,13 @@
     #define SI4463_INT 5
     #define SI4463_SDN 4
     #define SI4463_CS 6
+
+    #define I2C_SDA 49
+    #define I2C_SCL 50
+    #define TVP5151_ADDR 0x5C
+
+    #define TVP5151_PDN 25
+    #define TVP5151_RESET 3
 #endif
 
 
