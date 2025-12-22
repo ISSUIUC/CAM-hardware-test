@@ -9,7 +9,7 @@ To be able to build this project, download platformio (either core or through th
 You will first need to download the `arduino` component by cloning the git submodule:
 
 ```bash
-$ git submodule update --init --recurse
+$ git submodule update --init --recursive
 ```
 
 This will take a while, and will clone the esp32_arduino repository to `components/arduino`.
