@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "USB.h"
 #include "USBCDC.h"
 
@@ -14,6 +16,10 @@ USBCDC USBSerial;
 #include <tvp5151.h>
 
 #include "esp_h264_enc_single.h"
+
+#define CORE_0 0
+#define CORE_1 1
+
 
 // #define C_ENABLE_BUZZER
 // #define C_ENABLE_CAM_CONTROL
@@ -32,12 +38,29 @@ const int LED_PIN = 51;
 const int LED_PIN = 22;
 #endif
 
+// Threads go here!
+// Note: If you need to add a new thread, follow the example below & ALSO create an entry in init_tasks for the thread
+
+void task_ex(void* arg) {
+    while(true) {
+        Serial.println("Example task running...");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+// Below is setup
+
+[[noreturn]] void init_tasks() {
+    xTaskCreatePinnedToCore(task_ex, "example", 1024, nullptr, 0, nullptr, CORE_0);
+}
+
 void setup()
 {
     USB.begin();
     Serial.begin(115200);
 
-    // Wire.begin(I2C_SDA, I2C_SCL);
+    Wire.begin(I2C_SDA, I2C_SCL);
+    SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
 
     #ifdef C_ENABLE_BUZZER
         pinMode(BUZZER_PIN, OUTPUT);
@@ -90,27 +113,13 @@ void setup()
     #endif
 
 
-    
-    // SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
 
     Serial.println("init");
-
-
+    init_tasks();
 }
+
 
 void loop()
 {
-
-#ifdef IS_CAM
-
-    #ifdef C_ENABLE_TVP_DECODE
-    for(int i = 0; i < 8; i++) {
-        Serial.print(digitalRead(YOUT[i]) ? 1 : 0);
-    }
-    Serial.println();
-    #endif
-
-    // Serial.println("loop");
-    delay(1);
-#endif
+    vTaskDelay(pdMS_TO_TICKS(1000));
 }

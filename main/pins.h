@@ -14,6 +14,9 @@
 
     #define TVP5151_PDN 25
     #define TVP5151_RESET 3
+    #define TVP5151_VSYNC 46
+    #define TVP5151_HSYNC 41
+    #define TVP5151_SCLK 2
 
     #define LED_BLUE 54
     #define LED_GREEN 53
