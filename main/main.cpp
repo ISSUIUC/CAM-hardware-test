@@ -5,6 +5,7 @@
 #include "USBCDC.h"
 
 USBCDC USBSerial;
+#undef Serial
 #define Serial USBSerial
 
 #include <pins.h>
