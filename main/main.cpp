@@ -25,7 +25,7 @@ USBCDC USBSerial;
 // #define C_ENABLE_CAM_CONTROL
 // #define C_ENABLE_TVP_DECODE
 
-// RHSoftwareSPI _rspi;
+// RHSoftwareSPI _rspi; 
 // RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
 
 // tvp5151 tvp(TVP5151_PDN, TVP5151_RESET, TVP5151_ADDR, &Wire);
@@ -59,7 +59,10 @@ void setup()
     USB.begin();
     Serial.begin(115200);
 
+    #ifdef IS_CAM
     Wire.begin(I2C_SDA, I2C_SCL);
+    #endif
+    
     SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
 
     #ifdef C_ENABLE_BUZZER
