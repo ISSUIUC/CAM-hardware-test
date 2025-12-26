@@ -17,6 +17,7 @@ USBCDC USBSerial;
 #include <tvp5151.h>
 
 #include "esp_h264_enc_single.h"
+#include "runcamdevice.h"
 
 #define CORE_0 0
 #define CORE_1 1
@@ -53,6 +54,10 @@ void task_ex(void* arg) {
 
 [[noreturn]] void init_tasks() {
     xTaskCreatePinnedToCore(task_ex, "example", 1024, nullptr, 0, nullptr, CORE_0);
+
+    while(true) {
+        delay(1000);
+    }
 }
 
 void setup()
