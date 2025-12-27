@@ -102,10 +102,10 @@ uint8_t tvp5151::read_cr_gain()
     return -1;
 }
 
-/* Toggles the `GPCL (general purpose control logic)/VBLK (vertical blanking)` output, set_enabled=TRUE will enable GPCL output, otherwise VBLK will be selected
+/* Set_enabled=TRUE will enable GPCL output, otherwise VBLK will be selected
     - Should enable the INTREQ/GPCL/VBLK output enable, bit 5 of 0x03h
 */
-bool tvp5151::en_gpcl_output(bool set_enabled)
+bool tvp5151::gpcl_output(bool enable_gpcl_output)
 {
     // Page 40 is for the  configuration shared pins register
     // This toggles the function of the GPL/INREQ/VBLK pin
@@ -143,7 +143,7 @@ bool tvp5151::en_gpcl_output(bool set_enabled)
     // So we gotta write 1 for bit 5 (0x20) and depending on set_enabled
     reg_val |= 0x20;
 
-    if (set_enabled)
+    if (enable_gpcl_output)
     {
         reg_val &= ~0x80; // set bit 7 low
     }
@@ -156,7 +156,7 @@ bool tvp5151::en_gpcl_output(bool set_enabled)
     return true;
 }
 
-bool tvp5151::toggle_gpcl_logic_level(bool level)
+bool tvp5151::set_gpcl_logic_level(bool level)
 {
 
     // read the register

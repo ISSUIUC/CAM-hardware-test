@@ -53,18 +53,19 @@ private:
 public:
     tvp5151(uint8_t pdn, uint8_t reset, uint8_t i2c_addr, TwoWire *i2c);
 
+    // Bare-bone stuff
     bool init();
     uint16_t read_device_id();
     void source_select(CAM_SELECT camera);
 
-    bool en_gpcl_output(bool set_enabled);
-    bool toggle_gpcl_logic_level(bool level);
-
     // examples
     void setup_ex_1_ntsc_to_bt656();
 
-    uint16_t read_device_id();
+    // Writes
+    bool gpcl_output(bool enable_gpcl_output);
+    bool set_gpcl_logic_level(bool level);
 
+    // Reads
     uint8_t read_cb_gain();
     uint8_t read_cr_gain();
 };
