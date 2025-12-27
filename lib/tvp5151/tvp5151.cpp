@@ -107,17 +107,12 @@ uint8_t tvp5151::read_cr_gain()
 bool tvp5151::en_gpcl_output(bool set_enabled)
 {
     // Page 40 is for the  configuration shared pins register
-    // Address is 0Fh, and default is 00h
-    // We need to set bit 1 to be true so we write 0x02 to that address
-    // this i sbecause this toggles the function of the GPL/INREQ/VBLK pin
+    // This toggles the function of the GPL/INREQ/VBLK pin
     // 0 is INTREQ (defuault)
     // 1 is GPCL or VBLK depending on bit 7 of register 03h
-    _i2c->beginTransmission(_i2c_addr);
-    _i2c->write(TVP_REG_CONFIG_SHARED_PINS);
-    _i2c->write(0x02);
-    _i2c->endTransmission();
+    write_register(TVP_REG_CONFIG_SHARED_PINS, 0x02);
 
-    // page 31 has miscellanous controls register
+    // page 31
     /*
     BIT 7:
     VBLK/GPCL function select (affects INTREQ/GPCL/VBLK output only if bit 1 of I2C register 0Fh is set to 1)
