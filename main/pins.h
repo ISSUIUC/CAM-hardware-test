@@ -44,6 +44,11 @@
     #define SI4463_SDN 5
     #define SI4463_CS 7
 
-    #define I2C_SDA 0
-    #define I2C_SCL 0
+    #define LED_BLUE 20
+    #define LED_GREEN 13
+    #define LED_ORANGE 22
+    #define LED_RED 23
+
+    #define I2C_SDA 31
+    #define I2C_SCL 30
 #endif

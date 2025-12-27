@@ -21,13 +21,20 @@ USBCDC USBSerial;
 #define CORE_0 0
 #define CORE_1 1
 
+// #define WAIT_FOR_SERIAL
 
-// #define C_ENABLE_BUZZER
+#ifdef IS_CAM
+#define C_ENABLE_BUZZER
 // #define C_ENABLE_CAM_CONTROL
 // #define C_ENABLE_TVP_DECODE
+#define C_ENABLE_TX
+#endif
 
-// RHSoftwareSPI _rspi;
-// RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
+#ifdef IS_EAGLE
+#define E_ENABLE_RX
+#endif
+
+
 
 // tvp5151 tvp(TVP5151_PDN, TVP5151_RESET, TVP5151_ADDR, &Wire);
 
@@ -42,17 +49,91 @@ const int LED_PIN = 22;
 // Threads go here!
 // Note: If you need to add a new thread, follow the example below & ALSO create an entry in init_tasks for the thread
 
-void task_ex(void* arg) {
+void task_radio_tx(void* arg) {
+    RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
+    Serial.println("Initializing radio..");
+    if(!radio.init()) {
+        Serial.println("Radio failed to init");
+        while(true) {
+            vTaskDelay(pdMS_TO_TICKS(1));
+        }
+    }
+    Serial.println("Init successfully");
+    vTaskDelay(pdMS_TO_TICKS(50));
+
+    uint8_t dat[3] = {0xab, 0xcd, 0xef};
+    bool r_st = false;
+
     while(true) {
-        Serial.println("Example task running...");
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        radio.send(dat, 3);
+        if(radio.waitPacketSent(100)) {
+            r_st = !r_st;
+            digitalWrite(LED_GREEN, r_st);
+            Serial.print(".");
+        } else {
+            Serial.print("x");
+            digitalWrite(LED_GREEN, LOW);
+        }
     }
 }
 
+
+  void task_radio_rx(void* arg) {
+      RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
+      Serial.println("Initializing radio..");
+      if(!radio.init()) {
+          Serial.println("Radio failed to init");
+          while(true) { vTaskDelay(pdMS_TO_TICKS(1)); }
+      }
+      Serial.println("Init successfully");
+
+      uint8_t dat[10];
+      uint8_t len = sizeof(dat);
+
+      // Force into RX mode
+      radio.available();
+
+      while(true) {
+          radio.handleInterrupt();
+
+          if(radio.available()) {
+              if(radio.recv(dat, &len)) {
+                  Serial.println("Got packet!");
+              }
+          }
+
+          // Debug: print modem/interrupt status every 2 seconds
+          static uint32_t last_print = 0;
+          if(millis() - last_print > 2000) {
+              last_print = millis();
+
+              uint8_t int_status[8];
+              uint8_t clear_none[] = {0, 0, 0};  // Don't clear any interrupts
+              radio.command(0x20, clear_none, 3, int_status, 8);  // GET_INT_STATUS
+
+              Serial.print("INT_PEND="); Serial.print(int_status[0], HEX);
+              Serial.print(" PH_PEND="); Serial.print(int_status[2], HEX);
+              Serial.print(" MODEM_PEND="); Serial.print(int_status[4], HEX);
+              Serial.print(" Mode="); Serial.println(radio.mode());
+          }
+
+          vTaskDelay(1);
+      }
+  }
 // Below is setup
 
 [[noreturn]] void init_tasks() {
-    xTaskCreatePinnedToCore(task_ex, "example", 1024, nullptr, 0, nullptr, CORE_0);
+    #ifdef C_ENABLE_TX
+        xTaskCreatePinnedToCore(task_radio_tx, "radio", 8192, nullptr, 0, nullptr, CORE_0);
+    #endif
+    #ifdef E_ENABLE_RX
+        xTaskCreatePinnedToCore(task_radio_rx, "radio", 8192, nullptr, 0, nullptr, CORE_0);
+    #endif
+
+    while(true) {
+        delay(1000);
+        // Serial.println("Running");
+    }
 }
 
 void setup()
@@ -62,6 +143,16 @@ void setup()
 
     Wire.begin(I2C_SDA, I2C_SCL);
     SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
+
+    pinMode(LED_BLUE, OUTPUT);
+    pinMode(LED_RED, OUTPUT);
+    pinMode(LED_GREEN, OUTPUT);
+    pinMode(LED_ORANGE, OUTPUT);
+
+    digitalWrite(LED_BLUE, LOW);
+    digitalWrite(LED_RED, LOW);
+    digitalWrite(LED_GREEN, LOW);
+    digitalWrite(LED_ORANGE, LOW);
 
     #ifdef C_ENABLE_BUZZER
         pinMode(BUZZER_PIN, OUTPUT);
@@ -75,10 +166,13 @@ void setup()
     #endif
 
 
+    #ifdef WAIT_FOR_SERIAL
     while (!Serial)
     {
     };
+    #endif
     delay(50);
+    
     
     #ifdef C_ENABLE_TVP_DECODE
 

@@ -437,7 +437,8 @@ bool RH_RF24::setModemConfig(ModemConfigChoice index)
 
 void RH_RF24::setPreambleLength(uint16_t bytes)
 {
-    uint8_t config[] = { (uint8_t)bytes, 0x14, 0x00, 0x00, 
+    // Note: 4th byte is PREAMBLE_CONFIG_STD_2 - set to 0x0F for 4GFSK compatibility (RX preamble timeout)
+    uint8_t config[] = { (uint8_t)bytes, 0x14, 0x00, 0x0F,
 			 RH_RF24_PREAMBLE_FIRST_1 | RH_RF24_PREAMBLE_LENGTH_BYTES | RH_RF24_PREAMBLE_STANDARD_1010};
     set_properties(RH_RF24_PROPERTY_PREAMBLE_TX_LENGTH, config, sizeof(config));
 }

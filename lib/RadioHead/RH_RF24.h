@@ -1058,11 +1058,13 @@ public:
     /// \return The integer device type
     uint16_t deviceType() {return _deviceType;};
 
-protected:
+public:
     /// This is a low level function to handle the interrupts for one instance of RF24.
     /// Called automatically by isr*()
-    /// Should not need to be called by user code.
+    /// Can be called manually to poll radio status when interrupts don't work (e.g., FreeRTOS)
     void           handleInterrupt();
+
+protected:
 
     /// Clears the chips RX FIFO
     /// \return true if successful
