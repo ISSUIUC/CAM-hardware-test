@@ -48,6 +48,10 @@ private:
     uint8_t _reset;
 
     // uint8_t read_register(uint8_t address);
+    tvp_i2c_result_t read_register(uint8_t register_addr);
+    void write_register(uint8_t register_addr, uint8_t data);
+    void print_I2C_error(TVP_I2C_ERROR error);
+    TVP_I2C_ERROR categorize_error(uint8_t error);
 
 public:
     tvp5151(uint8_t pdn, uint8_t reset, uint8_t i2c_addr, TwoWire *i2c);
@@ -61,19 +65,15 @@ public:
 
     uint16_t read_device_id();
     void TVP_CAM_Decoder_Select(CAM_SELECT CAM);
-    void _debug_set_misc_controls();
     void en_gpcl_output(bool set_enabled);
     void toggle_gpcl_logic_level(bool level);
 
     // examples
     void setup_ex_1_ntsc_to_bt656();
+    void _debug_set_misc_controls();
 
     uint16_t read_device_id();
 
-    tvp_i2c_result_t read_register(uint8_t register_addr);
-    void write_register(uint8_t register_addr, uint8_t data);
-    void print_I2C_error(TVP_I2C_ERROR error);
-    TVP_I2C_ERROR categorize_error(uint8_t error);
     uint8_t read_cb_gain();
     uint8_t read_cr_gain();
 };
