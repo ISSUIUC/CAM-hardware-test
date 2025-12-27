@@ -24,6 +24,9 @@ bool tvp5151::init()
     return true;
 }
 
+// 3.21.40 MSB of Device ID Register
+// 3.21.41 LSB of Device ID Register
+
 uint16_t tvp5151::read_device_id()
 {
 
@@ -44,10 +47,64 @@ uint16_t tvp5151::read_device_id()
     return device_id;
 }
 
-// 3.21.44 Vertical Line Count MSB Register (the only useful bits are 1 and 0 so can I do the same thing of << 8 for MSB and then + LSB ?)
-// 3.21.45 Vertical Line Count LSB Register (Used for seeing how many lines per frame)
+// for the registers should I have a boolean for each bit such as black output if I want it on or should this just select camera in which it's decoding? I think the latter
+void tvp5151::source_select(CAM_SELECT CAM)
+{
 
-void tvp5151::en_gpcl_output(bool set_enabled)
+    if (CAM)
+    { // CAM1 (AIP1B)
+        write_register(TVP_INPUT_SOURCE_SELECTION, 0x02);
+    }
+    else
+    { // CAM0 (AIP1A)
+        write_register(TVP_INPUT_SOURCE_SELECTION, 0x00);
+    }
+}
+
+void tvp5151::setup_ex_1_ntsc_to_bt656()
+{
+    // Sets registers according to the default spec 1
+    write_register(TVP_REG_MISC_CONTROLS, 0x09); // 0x09 Enables clock & YCbCr output
+}
+
+//----------------------------------------------------------------------------------------------------------------------------------
+
+// Outputs and Data Rates Select Register
+// Extended Range vs BT.601 Limited Range (We are using default (Extended code range) and
+// if video dosen't look right it's said that this is a common error with video so could be worth checking into more)
+// ESP32 / FPGA processing Reccomends extended range so this is what is set by default
+
+// 3.21.16 Active Video Cropping Start Pixel MSB Register
+// We are not doing any sort of AVID right? Because our CAM Signal alligns with video decoder standard 720 x 480 ?
+
+// 3.21.20 Genlock and RTC Register
+// Real Time Communcation I need to look into this more and if we need it as we are ultimately wanting to stream live video? Does it correlate at all?
+
+// 3.21.33 Cb Gain Factor Register
+uint8_t tvp5151::read_cb_gain()
+{
+    tvp_i2c_result_t reg_val = read_register(TVP_REF_CB_GAIN_FACTOR);
+    if (reg_val.result == SUCCESS)
+    {
+        return reg_val.data;
+    }
+    return -1;
+}
+
+uint8_t tvp5151::read_cr_gain()
+{
+    tvp_i2c_result_t reg_val = read_register(TVP_REF_CR_GAIN_FACTOR);
+    if (reg_val.result == SUCCESS)
+    {
+        return reg_val.data;
+    }
+    return -1;
+}
+
+/* Toggles the `GPCL (general purpose control logic)/VBLK (vertical blanking)` output, set_enabled=TRUE will enable GPCL output, otherwise VBLK will be selected
+    - Should enable the INTREQ/GPCL/VBLK output enable, bit 5 of 0x03h
+*/
+bool tvp5151::en_gpcl_output(bool set_enabled)
 {
     // Page 40 is for the  configuration shared pins register
     // Address is 0Fh, and default is 00h
@@ -56,7 +113,7 @@ void tvp5151::en_gpcl_output(bool set_enabled)
     // 0 is INTREQ (defuault)
     // 1 is GPCL or VBLK depending on bit 7 of register 03h
     _i2c->beginTransmission(_i2c_addr);
-    _i2c->write(TVP_CONFIG_SHARED_PINS);
+    _i2c->write(TVP_REG_CONFIG_SHARED_PINS);
     _i2c->write(0x02);
     _i2c->endTransmission();
 
@@ -78,7 +135,12 @@ void tvp5151::en_gpcl_output(bool set_enabled)
     1 = Output enabled (recommended)
     */
 
-    tvp_i2c_result_t reg_val = read_register(TVP_MISC_CONTROLS);
+    tvp_i2c_result_t reg_val_read = read_register(TVP_REG_MISC_CONTROLS);
+    if (reg_val_read.result != SUCCESS)
+    {
+        return false;
+    }
+    uint8_t reg_val = reg_val_read.data;
 
     // So we gotta write 1 for bit 5 (0x20) and depending on set_enabled
     reg_val |= 0x20;
@@ -92,17 +154,20 @@ void tvp5151::en_gpcl_output(bool set_enabled)
         reg_val |= 0x80; // bit 7 high
     }
 
-    _i2c->beginTransmission(_i2c_addr);
-    _i2c->write(TVP_MISC_CONTROLS);
-    _i2c->write(reg_val);
-    _i2c->endTransmission();
+    write_register(TVP_REG_MISC_CONTROLS, reg_val);
+    return true;
 }
 
-void tvp5151::toggle_gpcl_logic_level(bool level)
+bool tvp5151::toggle_gpcl_logic_level(bool level)
 {
 
     // read the register
-    uint8_t reg_val = read_register(TVP_MISC_CONTROLS);
+    tvp_i2c_result_t reg_val_read = read_register(TVP_REG_MISC_CONTROLS);
+    if (reg_val_read.result != SUCCESS)
+    {
+        return false;
+    }
+    uint8_t reg_val = reg_val_read.data;
 
     if (level)
     {
@@ -113,46 +178,11 @@ void tvp5151::toggle_gpcl_logic_level(bool level)
         reg_val &= ~0x40; // Lowwww
     }
 
-    _i2c->beginTransmission(_i2c_addr);
-    _i2c->write(TVP_MISC_CONTROLS);
-    _i2c->write(reg_val);
-    _i2c->endTransmission();
+    write_register(TVP_REG_MISC_CONTROLS, reg_val);
+    return true;
 }
 
-// Sets up NTSC to Bt.656 w/ YCbCr
-void tvp5151::setup_ex_1_ntsc_to_bt656()
-{
-    // Register 03h
-    //  Bit 3:
-    /*
-    YCbCr output enable
-    0 = YOUT[7:0] high impedance (default)
-    1 = YOUT[7:0] active
-    */
-    // Bit 0:
-    /*
-    Clock output enable
-    0 = SCLK output is high impedance (default)
-    1 = SCLK output is enabled
-    */
-
-    // 0x09 -> 0000 1001 (what we need)
-    _i2c->beginTransmission(_i2c_addr);
-    _i2c->write(TVP_MISC_CONTROLS);
-    _i2c->write(0x09);
-    _i2c->endTransmission();
-}
-
-// uint8_t tvp5151::read_register(uint8_t address)
-// {
-//     _i2c->beginTransmission(_i2c_addr);
-//     _i2c->write(address);
-//     _i2c->endTransmission(false);
-//     _i2c->requestFrom(_i2c_addr, (uint8_t)1);
-
-//     uint8_t reg_val = _i2c->read();
-//     return reg_val;
-// }
+//--------------------------------------------------------------------------------------------------------------
 
 tvp_i2c_result_t tvp5151::read_register(uint8_t register_addr)
 {
