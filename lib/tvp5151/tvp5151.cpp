@@ -35,6 +35,7 @@ uint16_t tvp5151::read_device_id()
     uint8_t error = _i2c->endTransmission(true);
     if (error != SUCCESS)
     {
+        Serial.println("[ERROR] I2C read_device_id reading error");
         print_I2C_error(categorize_error(error));
         return -1;
     }
@@ -133,6 +134,8 @@ bool tvp5151::en_gpcl_output(bool set_enabled)
     tvp_i2c_result_t reg_val_read = read_register(TVP_REG_MISC_CONTROLS);
     if (reg_val_read.result != SUCCESS)
     {
+        Serial.println("[ERROR] I2C read failed on read_register");
+        print_I2C_error(reg_val_read.result);
         return false;
     }
     uint8_t reg_val = reg_val_read.data;
@@ -160,6 +163,8 @@ bool tvp5151::toggle_gpcl_logic_level(bool level)
     tvp_i2c_result_t reg_val_read = read_register(TVP_REG_MISC_CONTROLS);
     if (reg_val_read.result != SUCCESS)
     {
+        Serial.println("[ERROR] I2C read failed on read_register");
+        print_I2C_error(reg_val_read.result);
         return false;
     }
     uint8_t reg_val = reg_val_read.data;
@@ -190,7 +195,7 @@ tvp_i2c_result_t tvp5151::read_register(uint8_t register_addr)
 
     if (error)
     {
-        Serial.println("I2C read failed on read_register");
+        Serial.println("[ERROR] I2C read failed on read_register");
         print_I2C_error(reg_val.result);
         return reg_val;
     }
@@ -209,7 +214,7 @@ void tvp5151::write_register(uint8_t register_addr, uint8_t data)
     uint8_t error = _i2c->endTransmission(true);
     if (error)
     {
-        Serial.println("I2C read failed on write_register");
+        Serial.println("[ERROR] I2C read failed on write_register");
         print_I2C_error(categorize_error(error));
     }
 }
