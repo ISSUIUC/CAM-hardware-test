@@ -258,7 +258,8 @@ bool tvp5151::set_gpcl_output(bool enable_gpcl_output)
         return false;
 
     // Enable the output driver (Bit 5)
-    modify_register_bit(TVP_REG_MISC_CONTROLS, 0x20, true);
+    if (!modify_register_bit(TVP_REG_MISC_CONTROLS, 0x20, true))
+        return false;
 
     // Set Bit 7: 0 for GPCL, 1 for VBLK
     return modify_register_bit(TVP_REG_MISC_CONTROLS, 0x80, !enable_gpcl_output);
