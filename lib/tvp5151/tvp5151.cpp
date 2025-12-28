@@ -111,11 +111,13 @@ After an interrupt condition is set it can be reset by writing to this register 
 Lock state interrupt
 0 = TVP5151 is not locked to the video signal (default).
 1 = TVP5151 is locked to the video signal.
+
+This is essentially an AND statement comparing the status of the vertical, hori, and color locks.
 */
 bool tvp5151::read_lock_state_interrupt()
 {
     bool ret = read_register_bit(TVP_REG_INTERRUPT_STATUS_A, 0x80);
-    modify_register_bit(TVP_REG_INTERRUPT_STATUS_A, 0x80, true);
+    write_register(TVP_REG_INTERRUPT_STATUS_A, 0x80);
     return ret;
 }
 
