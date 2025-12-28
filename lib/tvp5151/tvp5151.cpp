@@ -36,7 +36,7 @@ uint16_t tvp5151::read_device_id()
     uint8_t error = _i2c->endTransmission(true);
     if (error != SUCCESS)
     {
-        Serial.println(F("[ERROR] I2C read_device_id reading error"));
+        Serial.println("[ERROR] I2C read_device_id reading error");
         print_I2C_error(categorize_error(error));
         return -1;
     }
@@ -50,24 +50,23 @@ uint16_t tvp5151::read_device_id()
 }
 
 // for the registers should I have a boolean for each bit such as black output if I want it on or should this just select camera in which it's decoding? I think the latter
-void tvp5151::source_select(CAM_SELECT CAM)
+bool tvp5151::source_select(CAM_SELECT CAM)
 {
 
     if (CAM)
     { // CAM1 (AIP1B)
-        // TODO: Error handling here if needed
-        write_register(TVP_INPUT_SOURCE_SELECTION, 0x02);
+        return write_register(TVP_INPUT_SOURCE_SELECTION, 0x02);
     }
     else
     { // CAM0 (AIP1A)
-        write_register(TVP_INPUT_SOURCE_SELECTION, 0x00);
+        return write_register(TVP_INPUT_SOURCE_SELECTION, 0x00);
     }
 }
 
-void tvp5151::setup_ex_1_ntsc_to_bt656()
+bool tvp5151::setup_ex_1_ntsc_to_bt656()
 {
     // Sets registers according to the default spec 1
-    write_register(TVP_REG_MISC_CONTROLS, 0x09); // 0x09 Enables clock & YCbCr output
+    return write_register(TVP_REG_MISC_CONTROLS, 0x09); // 0x09 Enables clock & YCbCr output
 }
 
 //----------------------------------------------------------------------------------------------------------------------------------
@@ -198,9 +197,9 @@ bool tvp5151::read_vcr_mode()
 
 //--------------------------------------------------------------------------------------------------------------
 
-void tvp5151::reset_miscellaneous_controls_register()
+bool tvp5151::reset_miscellaneous_controls_register()
 {
-    write_register(TVP_REG_MISC_CONTROLS, 0x00);
+    return write_register(TVP_REG_MISC_CONTROLS, 0x00);
 }
 
 /*
@@ -279,7 +278,7 @@ tvp_i2c_result_t tvp5151::read_register(uint8_t register_addr)
 
     if (error)
     {
-        Serial.println(F("[ERROR] I2C read failed on read_register"));
+        Serial.println("[ERROR] I2C read failed on read_register");
         print_I2C_error(reg_val.result);
         return reg_val;
     }
@@ -298,7 +297,7 @@ bool tvp5151::write_register(uint8_t register_addr, uint8_t data)
     uint8_t error = _i2c->endTransmission(true);
     if (error)
     {
-        Serial.println(F("[ERROR] I2C read failed on write_register"));
+        Serial.println("[ERROR] I2C read failed on write_register");
         print_I2C_error(categorize_error(error));
         return false;
     }
@@ -333,7 +332,7 @@ bool tvp5151::read_register_bit(uint8_t reg, uint8_t bit_mask)
 
     if (res.result != SUCCESS)
     {
-        Serial.println(F("[ERROR] I2C Read Error"));
+        Serial.println("[ERROR] I2C Read Error");
         print_I2C_error(categorize_error(res.result));
         return false;
     }
@@ -347,22 +346,22 @@ void tvp5151::print_I2C_error(TVP_I2C_ERROR error)
     switch (error)
     {
     case SUCCESS:
-        Serial.print(F("Success"));
+        Serial.print("Success");
         break;
     case BUFFER_OVERFLOW:
-        Serial.print(F("Buffer Overflow"));
+        Serial.print("Buffer Overflow");
         break;
     case NACK_ADDRESS:
-        Serial.print(F("No acknowledge on address"));
+        Serial.print("No acknowledge on address");
         break;
     case NACK_DATA:
-        Serial.print(F("No acknowledge on data"));
+        Serial.print("No acknowledge on data");
         break;
     case OTHER:
-        Serial.print(F("Other"));
+        Serial.print("Other");
         break;
     case TIMEOUT:
-        Serial.print(F("Time_out"));
+        Serial.print("Time_out");
         break;
     }
 }

@@ -68,10 +68,14 @@ public:
     // Bare-bone stuff
     bool init();
     uint16_t read_device_id();
-    void source_select(CAM_SELECT camera);
+
+    // TODO: UNTESTED
+    //------
+    bool source_select(CAM_SELECT camera);
+    //------
 
     // examples
-    void setup_ex_1_ntsc_to_bt656();
+    bool setup_ex_1_ntsc_to_bt656();
 
     // Writes
 
@@ -80,7 +84,7 @@ public:
 
     bool set_gpcl_output(bool enable_gpcl_output);
     bool set_gpcl_logic_level(bool level);
-    void reset_miscellaneous_controls_register();
+    bool reset_miscellaneous_controls_register();
     bool set_ycbcr_output_enable(bool enable_ycbcr_output);
     bool set_clock_output_enable(bool enable_clock);
 
