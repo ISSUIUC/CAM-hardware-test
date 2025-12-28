@@ -36,7 +36,7 @@ uint16_t tvp5151::read_device_id()
     uint8_t error = _i2c->endTransmission(true);
     if (error != SUCCESS)
     {
-        Serial.println("[ERROR] I2C read_device_id reading error");
+        Serial.println(F("[ERROR] I2C read_device_id reading error"));
         print_I2C_error(categorize_error(error));
         return -1;
     }
@@ -278,7 +278,7 @@ tvp_i2c_result_t tvp5151::read_register(uint8_t register_addr)
 
     if (error)
     {
-        Serial.println("[ERROR] I2C read failed on read_register");
+        Serial.println(F("[ERROR] I2C read failed on read_register"));
         print_I2C_error(reg_val.result);
         return reg_val;
     }
@@ -297,7 +297,7 @@ bool tvp5151::write_register(uint8_t register_addr, uint8_t data)
     uint8_t error = _i2c->endTransmission(true);
     if (error)
     {
-        Serial.println("[ERROR] I2C read failed on write_register");
+        Serial.println(F("[ERROR] I2C read failed on write_register"));
         print_I2C_error(categorize_error(error));
         return false;
     }
@@ -332,7 +332,7 @@ bool tvp5151::read_register_bit(uint8_t reg, uint8_t bit_mask)
 
     if (res.result != SUCCESS)
     {
-        Serial.println("[ERROR] I2C Read ERROR");
+        Serial.println(F("[ERROR] I2C Read Error"));
         print_I2C_error(categorize_error(res.result));
         return false;
     }
@@ -346,22 +346,22 @@ void tvp5151::print_I2C_error(TVP_I2C_ERROR error)
     switch (error)
     {
     case SUCCESS:
-        Serial.print("Success");
+        Serial.print(F("Success"));
         break;
     case BUFFER_OVERFLOW:
-        Serial.print("Buffer Overflow");
+        Serial.print(F("Buffer Overflow"));
         break;
     case NACK_ADDRESS:
-        Serial.print("No acknowledge on address");
+        Serial.print(F("No acknowledge on address"));
         break;
     case NACK_DATA:
-        Serial.print("No acknowledge on data");
+        Serial.print(F("No acknowledge on data"));
         break;
     case OTHER:
-        Serial.print("Other");
+        Serial.print(F("Other"));
         break;
     case TIMEOUT:
-        Serial.print("Time_out");
+        Serial.print(F("Time_out"));
         break;
     }
 }
