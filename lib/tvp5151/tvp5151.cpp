@@ -128,17 +128,6 @@ bool tvp5151::read_vertical_sync_lock_status()
 }
 
 /*
-3.21.48 Status Register #1 | Bit 3 (Page 54)
-Color subcarrier lock status
-0 = Color subcarrier is not locked.
-1 = Color subcarrier is locked.
-*/
-bool tvp5151::read_color_subcarrier_lock_status()
-{
-    return read_register_bit(TVP_REG_STATUS_ONE, 0x08);
-}
-
-/*
 3.21.48 Status Register #1 | Bit 1 (Page 54)
 Horizontal sync lock status
 0 = Horizontal sync is not locked.
@@ -147,6 +136,17 @@ Horizontal sync lock status
 bool tvp5151::read_horizontal_sync_lock_status()
 {
     return read_register_bit(TVP_REG_STATUS_ONE, 0x02);
+}
+
+/*
+3.21.48 Status Register #1 | Bit 3 (Page 54)
+Color subcarrier lock status
+0 = Color subcarrier is not locked.
+1 = Color subcarrier is locked.
+*/
+bool tvp5151::read_color_subcarrier_lock_status()
+{
+    return read_register_bit(TVP_REG_STATUS_ONE, 0x08);
 }
 
 /*
