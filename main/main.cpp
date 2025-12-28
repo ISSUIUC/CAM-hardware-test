@@ -27,7 +27,7 @@ USBCDC USBSerial;
 #define C_ENABLE_BUZZER
 // #define C_ENABLE_CAM_CONTROL
 // #define C_ENABLE_TVP_DECODE
-#define C_ENABLE_TX
+// #define C_ENABLE_TX
 #endif
 
 #ifdef IS_EAGLE
@@ -48,6 +48,82 @@ const int LED_PIN = 22;
 
 // Threads go here!
 // Note: If you need to add a new thread, follow the example below & ALSO create an entry in init_tasks for the thread
+
+// Note frequencies (Hz) for Bad Piggies theme
+#define NOTE_C5  523
+#define NOTE_D5  587
+#define NOTE_DS5 622
+#define NOTE_F5  698
+#define NOTE_G5  784
+#define NOTE_GS5 831
+#define NOTE_AS5 932
+#define NOTE_C6  1047
+#define NOTE_REST 0
+
+void playNote(int pin, int frequency, int duration) {
+    if (frequency == NOTE_REST) {
+        noTone(pin);
+    } else {
+        tone(pin, frequency);
+    }
+    vTaskDelay(pdMS_TO_TICKS(duration));
+    noTone(pin);
+    vTaskDelay(pdMS_TO_TICKS(10)); // Small gap between notes
+}
+
+void task_buzzer(void* arg) {
+    // Init
+    pinMode(BUZZER_PIN, OUTPUT);
+    digitalWrite(BUZZER_PIN, LOW);
+
+
+    // Startup beep
+    tone(BUZZER_PIN, 2700);
+    vTaskDelay(pdMS_TO_TICKS(80));
+    noTone(BUZZER_PIN);
+
+    // Now play startup song - Bad Piggies Theme (from MIDI)
+    vTaskDelay(pdMS_TO_TICKS(200));
+
+    // Bad Piggies main theme melody
+    // First phrase
+    playNote(BUZZER_PIN, NOTE_C6, 400);
+    playNote(BUZZER_PIN, NOTE_C6, 300);
+
+    playNote(BUZZER_PIN, NOTE_AS5, 80);
+    playNote(BUZZER_PIN, NOTE_C6, 175);
+    playNote(BUZZER_PIN, NOTE_AS5, 175);
+    playNote(BUZZER_PIN, NOTE_GS5, 175);
+    playNote(BUZZER_PIN, NOTE_G5, 175);
+    playNote(BUZZER_PIN, NOTE_AS5, 100);
+    playNote(BUZZER_PIN, NOTE_GS5, 100);
+    playNote(BUZZER_PIN, NOTE_G5, 100);
+    playNote(BUZZER_PIN, NOTE_F5, 100);
+    playNote(BUZZER_PIN, NOTE_DS5, 150);
+    playNote(BUZZER_PIN, NOTE_F5, 200);
+    playNote(BUZZER_PIN, NOTE_G5, 400);
+
+    vTaskDelay(pdMS_TO_TICKS(100));
+    
+
+    // // Second phrase
+    playNote(BUZZER_PIN, NOTE_AS5, 400);
+    playNote(BUZZER_PIN, NOTE_AS5, 300);
+    playNote(BUZZER_PIN, NOTE_GS5, 80);
+    playNote(BUZZER_PIN, NOTE_G5, 175);
+    playNote(BUZZER_PIN, NOTE_F5, 175);
+    playNote(BUZZER_PIN, NOTE_DS5, 175);
+    playNote(BUZZER_PIN, NOTE_F5, 175);
+    playNote(BUZZER_PIN, NOTE_G5, 100);
+    playNote(BUZZER_PIN, NOTE_DS5, 100);
+    playNote(BUZZER_PIN, NOTE_C5, 100);
+    playNote(BUZZER_PIN, NOTE_DS5, 100);
+    playNote(BUZZER_PIN, NOTE_G5, 150);
+    playNote(BUZZER_PIN, NOTE_F5, 150);
+    playNote(BUZZER_PIN, NOTE_DS5, 400);
+    playNote(BUZZER_PIN, NOTE_D5, 400);
+
+}
 
 void task_radio_tx(void* arg) {
     RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
@@ -126,6 +202,9 @@ void task_radio_tx(void* arg) {
     #ifdef C_ENABLE_TX
         xTaskCreatePinnedToCore(task_radio_tx, "radio", 8192, nullptr, 0, nullptr, CORE_0);
     #endif
+    #ifdef C_ENABLE_BUZZER
+        xTaskCreatePinnedToCore(task_buzzer, "buz", 8192, nullptr, 0, nullptr, CORE_1);
+    #endif
     #ifdef E_ENABLE_RX
         xTaskCreatePinnedToCore(task_radio_rx, "radio", 8192, nullptr, 0, nullptr, CORE_0);
     #endif
@@ -154,16 +233,6 @@ void setup()
     digitalWrite(LED_GREEN, LOW);
     digitalWrite(LED_ORANGE, LOW);
 
-    #ifdef C_ENABLE_BUZZER
-        pinMode(BUZZER_PIN, OUTPUT);
-        digitalWrite(BUZZER_PIN, LOW);
-
-
-        tone(BUZZER_PIN, 2700);
-        delay(200);
-        noTone(BUZZER_PIN);
-
-    #endif
 
 
     #ifdef WAIT_FOR_SERIAL
