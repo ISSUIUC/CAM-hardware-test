@@ -49,8 +49,10 @@ private:
 
     // TODO: Untested
     //------
+
     bool modify_register_bit(uint8_t reg, uint8_t bit_mask, bool state);
     bool read_register_bit(uint8_t reg, uint8_t bit_mask);
+
     //------
 
     // other variables
@@ -74,11 +76,13 @@ public:
 
     // TODO: UNTESTED
     //------
+
     bool set_gpcl_output(bool enable_gpcl_output);
     bool set_gpcl_logic_level(bool level);
     void reset_miscellaneous_controls_register();
     bool set_ycbcr_output_enable(bool enable_ycbcr_output);
     bool set_clock_output_enable(bool enable_clock);
+
     //------
 
     // Reads
@@ -87,6 +91,7 @@ public:
 
     // TODO: UNTESTED
     //------
+
     bool read_vertical_sync_lock_status();
     bool read_horizontal_sync_lock_status();
     bool read_peak_white_detect_status();
@@ -94,5 +99,6 @@ public:
     bool read_vcr_mode();
     bool read_lost_lock_status();
     bool read_color_subcarrier_lock_status();
+
     //------
 };

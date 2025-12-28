@@ -107,13 +107,16 @@ uint8_t tvp5151::read_cr_gain()
 3.21.61 Interrupt Status Register A | Bit 7 (Page 62)
 "The interrupt status register A can be polled by the host processor to determine the source of an interrupt.
 After an interrupt condition is set it can be reset by writing to this register with a 1 in the appropriate bit(s)."
+^ Basically, to acknowledge the interrupt we need to write a 1 to this place (this function does that automatically)
 Lock state interrupt
 0 = TVP5151 is not locked to the video signal (default).
 1 = TVP5151 is locked to the video signal.
 */
 bool tvp5151::read_lock_state_interrupt()
 {
-    return read_register_bit(TVP_REG_STATUS_ONE, 0x80);
+    bool ret = read_register_bit(TVP_REG_INTERRUPT_STATUS_A, 0x80);
+    modify_register_bit(TVP_REG_INTERRUPT_STATUS_A, 0x80, true);
+    return ret;
 }
 
 /*
@@ -121,6 +124,7 @@ bool tvp5151::read_lock_state_interrupt()
 Vertical sync lock status
 0 = Vertical sync is not locked.
 1 = Vertical sync is locked.
+Returns 1 if the chip is successfully tracking the vertical timing (frames)
 */
 bool tvp5151::read_vertical_sync_lock_status()
 {
@@ -132,6 +136,7 @@ bool tvp5151::read_vertical_sync_lock_status()
 Horizontal sync lock status
 0 = Horizontal sync is not locked.
 1 = Horizontal sync is locked.
+Returns 1 if the chip is successfully tracking the horizontal timing (lines)
 */
 bool tvp5151::read_horizontal_sync_lock_status()
 {
@@ -154,6 +159,8 @@ bool tvp5151::read_color_subcarrier_lock_status()
 Lost lock detect
 0 = No lost lock since status register #1 was last read.
 1 = Lost lock since status register #1 was last read.
+It returns 1 if the lock was dropped at any point since you last read this register
+Reading the register automatically resets this bit to 0 (nice)
 */
 bool tvp5151::read_lost_lock_status()
 {
