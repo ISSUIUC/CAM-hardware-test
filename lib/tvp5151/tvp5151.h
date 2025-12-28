@@ -29,8 +29,11 @@ class tvp5151
 private:
     // Device registers
     static constexpr uint8_t TVP_INPUT_SOURCE_SELECTION = 0x00;
+
     static constexpr uint8_t TVP_REG_MISC_CONTROLS = 0x03;
     static constexpr uint8_t TVP_REG_CONFIG_SHARED_PINS = 0x0F;
+    static constexpr uint8_t TVP_REG_STATUS_ONE = 0x88;
+    static constexpr uint8_t TVP_REG_INTERRUPT_STATUS_A = 0xC0;
 
     static constexpr uint8_t TVP_REF_CB_GAIN_FACTOR = 0x2C;
     static constexpr uint8_t TVP_REF_CR_GAIN_FACTOR = 0x2D;
@@ -40,9 +43,18 @@ private:
 
     // Utilites
     tvp_i2c_result_t read_register(uint8_t register_addr);
-    void write_register(uint8_t register_addr, uint8_t data);
+    bool write_register(uint8_t register_addr, uint8_t data);
+
     void print_I2C_error(TVP_I2C_ERROR error);
     TVP_I2C_ERROR categorize_error(uint8_t error);
+
+    // TODO: Untested
+    //------
+
+    bool modify_register_bit(uint8_t reg, uint8_t bit_mask, bool state);
+    bool read_register_bit(uint8_t reg, uint8_t bit_mask);
+
+    //------
 
     // other variables
     TwoWire *_i2c;
@@ -56,16 +68,42 @@ public:
     // Bare-bone stuff
     bool init();
     uint16_t read_device_id();
-    void source_select(CAM_SELECT camera);
+
+    // TODO: UNTESTED
+    //------
+    bool source_select(CAM_SELECT camera);
+    //------
 
     // examples
-    void setup_ex_1_ntsc_to_bt656();
+    bool setup_ex_1_ntsc_to_bt656();
 
     // Writes
-    bool gpcl_output(bool enable_gpcl_output);
+
+    // TODO: UNTESTED
+    //------
+
+    bool set_gpcl_output(bool enable_gpcl_output);
     bool set_gpcl_logic_level(bool level);
+    bool reset_miscellaneous_controls_register();
+    bool set_ycbcr_output_enable(bool enable_ycbcr_output);
+    bool set_clock_output_enable(bool enable_clock);
+
+    //------
 
     // Reads
     uint8_t read_cb_gain();
     uint8_t read_cr_gain();
+
+    // TODO: UNTESTED
+    //------
+
+    bool read_vertical_sync_lock_status();
+    bool read_horizontal_sync_lock_status();
+    bool read_peak_white_detect_status();
+    bool read_lock_state_interrupt();
+    bool read_vcr_mode();
+    bool read_lost_lock_status();
+    bool read_color_subcarrier_lock_status();
+
+    //------
 };
