@@ -93,5 +93,6 @@ public:
     bool read_lock_state_interrupt();
     bool read_vcr_mode();
     bool read_lost_lock_status();
+    bool read_color_subcarrier_lock_status();
     //------
 };
