@@ -55,6 +55,7 @@ void tvp5151::source_select(CAM_SELECT CAM)
 
     if (CAM)
     { // CAM1 (AIP1B)
+        // TODO: Error handling here if needed
         write_register(TVP_INPUT_SOURCE_SELECTION, 0x02);
     }
     else
