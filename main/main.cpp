@@ -151,6 +151,70 @@ void setup()
 
     Serial.println("\n=== Test Complete ===\n");
 
+    // Test all write functions
+    Serial.println("\n=== TVP5151 Write Functions Test ===\n");
+
+    // Test clock output enable
+    Serial.println("Testing set_clock_output_enable(true)...");
+    if (tvp.set_clock_output_enable(true))
+    {
+        Serial.println("✓ Clock output enabled successfully");
+    }
+    else
+    {
+        Serial.println("✗ Failed to enable clock output");
+    }
+    delay(100);
+
+    // Test YCbCr output enable
+    Serial.println("Testing set_ycbcr_output_enable(true)...");
+    if (tvp.set_ycbcr_output_enable(true))
+    {
+        Serial.println("✓ YCbCr output enabled successfully");
+    }
+    else
+    {
+        Serial.println("✗ Failed to enable YCbCr output");
+    }
+    delay(100);
+
+    // Test GPCL logic level
+    Serial.println("Testing set_gpcl_logic_level(true)...");
+    if (tvp.set_gpcl_logic_level(true))
+    {
+        Serial.println("✓ GPCL logic level set to 1 successfully");
+    }
+    else
+    {
+        Serial.println("✗ Failed to set GPCL logic level");
+    }
+    delay(100);
+
+    // Test GPCL output
+    Serial.println("Testing set_gpcl_output(true)...");
+    if (tvp.set_gpcl_output(true))
+    {
+        Serial.println("✓ GPCL output configured successfully");
+    }
+    else
+    {
+        Serial.println("✗ Failed to configure GPCL output");
+    }
+    delay(100);
+
+    // Reset miscellaneous controls register
+    Serial.println("\nResetting miscellaneous controls register...");
+    if (tvp.reset_miscellaneous_controls_register())
+    {
+        Serial.println("✓ Register reset successfully");
+    }
+    else
+    {
+        Serial.println("✗ Failed to reset register");
+    }
+
+    Serial.println("\n=== Write Functions Test Complete ===\n");
+
 #endif
 
 #ifdef C_ENABLE_CAM_CONTROL
