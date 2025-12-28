@@ -10,6 +10,7 @@ tvp5151::tvp5151(uint8_t pdn, uint8_t reset, uint8_t addr, TwoWire *i2c)
 
 bool tvp5151::init()
 {
+    // Page 23 - Section 3.18
     pinMode(_pdn, OUTPUT);
     pinMode(_reset, OUTPUT);
 
