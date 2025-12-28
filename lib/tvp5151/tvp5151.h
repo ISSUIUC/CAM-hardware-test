@@ -43,7 +43,8 @@ private:
 
     // Utilites
     tvp_i2c_result_t read_register(uint8_t register_addr);
-    void write_register(uint8_t register_addr, uint8_t data);
+    bool write_register(uint8_t register_addr, uint8_t data);
+
     void print_I2C_error(TVP_I2C_ERROR error);
     TVP_I2C_ERROR categorize_error(uint8_t error);
 

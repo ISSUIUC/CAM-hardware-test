@@ -117,7 +117,8 @@ This is essentially an AND statement comparing the status of the vertical, hori,
 bool tvp5151::read_lock_state_interrupt()
 {
     bool ret = read_register_bit(TVP_REG_INTERRUPT_STATUS_A, 0x80);
-    write_register(TVP_REG_INTERRUPT_STATUS_A, 0x80);
+    if (!write_register(TVP_REG_INTERRUPT_STATUS_A, 0x80))
+        return false;
     return ret;
 }
 
@@ -253,7 +254,8 @@ INTREQ/GPCL/VBLK (pin 27) function select
 bool tvp5151::set_gpcl_output(bool enable_gpcl_output)
 {
     // Select GPCL function in the shared pin register
-    write_register(TVP_REG_CONFIG_SHARED_PINS, 0x02);
+    if (!write_register(TVP_REG_CONFIG_SHARED_PINS, 0x02))
+        return false;
 
     // Enable the output driver (Bit 5)
     modify_register_bit(TVP_REG_MISC_CONTROLS, 0x20, true);
@@ -286,7 +288,7 @@ tvp_i2c_result_t tvp5151::read_register(uint8_t register_addr)
     return reg_val;
 }
 
-void tvp5151::write_register(uint8_t register_addr, uint8_t data)
+bool tvp5151::write_register(uint8_t register_addr, uint8_t data)
 {
     _i2c->beginTransmission(_i2c_addr);
     _i2c->write(register_addr);
@@ -296,7 +298,9 @@ void tvp5151::write_register(uint8_t register_addr, uint8_t data)
     {
         Serial.println("[ERROR] I2C read failed on write_register");
         print_I2C_error(categorize_error(error));
+        return false;
     }
+    return true;
 }
 
 bool tvp5151::modify_register_bit(uint8_t reg, uint8_t bit_mask, bool state)
@@ -307,15 +311,13 @@ bool tvp5151::modify_register_bit(uint8_t reg, uint8_t bit_mask, bool state)
 
     uint8_t data = reg_read.data;
     if (state)
-    {
         data |= bit_mask;
-    }
     else
-    {
         data &= ~bit_mask;
-    }
 
-    write_register(reg, data);
+    if (!write_register(reg, data))
+        return false;
+
     return true;
 }
 
