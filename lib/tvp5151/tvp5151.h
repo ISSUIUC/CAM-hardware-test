@@ -47,8 +47,11 @@ private:
     void print_I2C_error(TVP_I2C_ERROR error);
     TVP_I2C_ERROR categorize_error(uint8_t error);
 
+    // TODO: Untested
+    //------
     bool modify_register_bit(uint8_t reg, uint8_t bit_mask, bool state);
     bool read_register_bit(uint8_t reg, uint8_t bit_mask);
+    //------
 
     // other variables
     TwoWire *_i2c;
@@ -68,19 +71,27 @@ public:
     void setup_ex_1_ntsc_to_bt656();
 
     // Writes
+
+    // TODO: UNTESTED
+    //------
     bool set_gpcl_output(bool enable_gpcl_output);
     bool set_gpcl_logic_level(bool level);
     void reset_miscellaneous_controls_register();
     bool set_ycbcr_output_enable(bool enable_ycbcr_output);
     bool set_clock_output_enable(bool enable_clock);
+    //------
 
     // Reads
     uint8_t read_cb_gain();
     uint8_t read_cr_gain();
+
+    // TODO: UNTESTED
+    //------
     bool read_vertical_sync_lock_status();
     bool read_horizontal_sync_lock_status();
     bool read_peak_white_detect_status();
     bool read_lock_state_interrupt();
     bool read_vcr_mode();
     bool read_lost_lock_status();
+    //------
 };
