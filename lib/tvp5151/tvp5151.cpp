@@ -265,6 +265,40 @@ bool tvp5151::set_gpcl_output(bool enable_gpcl_output)
     return modify_register_bit(TVP_REG_MISC_CONTROLS, 0x80, !enable_gpcl_output);
 }
 
+
+
+// 3.21.44 Vertical Line Count MSB Register (the only useful bits are 1 and 0 so can I do the same thing of << 8 for MSB and then + LSB ?)
+// 3.21.45 Vertical Line Count LSB Register (Used for seeing how many lines per frame)
+
+
+// 3.21.49 Status Register #2
+
+// 3.21.49 Status Register #2 || Bit 6 
+// Weak signal detection
+// 0 = No weak signal
+// 1 = Weak signal mode
+bool tvp5151::read_weak_signal(){
+    return read_register_bit(TVP_REG_STATUS_TWO, 0x40);
+}
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //--------------------------------------------------------------------------------------------------------------
 
 tvp_i2c_result_t tvp5151::read_register(uint8_t register_addr)

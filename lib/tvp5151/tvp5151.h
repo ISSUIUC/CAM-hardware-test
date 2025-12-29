@@ -33,6 +33,8 @@ private:
     static constexpr uint8_t TVP_REG_MISC_CONTROLS = 0x03;
     static constexpr uint8_t TVP_REG_CONFIG_SHARED_PINS = 0x0F;
     static constexpr uint8_t TVP_REG_STATUS_ONE = 0x88;
+    static constexpr uint8_t TVP_REG_STATUS_TWO = 0x89;
+
     static constexpr uint8_t TVP_REG_INTERRUPT_STATUS_A = 0xC0;
 
     static constexpr uint8_t TVP_REF_CB_GAIN_FACTOR = 0x2C;
@@ -106,4 +108,7 @@ public:
     bool read_color_subcarrier_lock_status();
 
     //------
+
+
+
 };
