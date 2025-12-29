@@ -253,7 +253,7 @@ INTREQ/GPCL/VBLK (pin 27) function select
 */
 bool tvp5151::set_gpcl_output(bool enable_gpcl_output)
 {
-    // Select GPCL function in the shared pin register
+    // Select GPCL/VBLK function in the shared pin register
     if (!write_register(TVP_REG_CONFIG_SHARED_PINS, 0x02))
         return false;
 
@@ -265,6 +265,120 @@ bool tvp5151::set_gpcl_output(bool enable_gpcl_output)
     return modify_register_bit(TVP_REG_MISC_CONTROLS, 0x80, !enable_gpcl_output);
 }
 
+//--------------------------Cropping STUFF------------------------------------------------------------------------------------
+/*
+Read section 3.13 graph.
+
+Some background:
+- NTSC is 720 x 480, which is why the AVID (horizontal cropping) is 10 bits long (two registers) while VBLK (vertical cropping) is 8 bits.
+*/
+
+bool tvp5151::reset_crop()
+{
+    if (!write_register(TVP_REG_AVID_CROP_START_MSB, 0x00))
+        return false;
+    if (!write_register(TVP_REG_AVID_CROP_START_LSB, 0x00))
+        return false;
+    if (!write_register(TVP_REG_AVID_CROP_STOP_MSB, 0x00))
+        return false;
+    if (!write_register(TVP_REG_AVID_CROP_STOP_LSB, 0x00))
+        return false;
+    if (!write_register(TVP_REG_VBLK_CROP_START, 0x00))
+        return false;
+    if (!write_register(TVP_REG_VBLK_CROP_STOP, 0x00))
+        return false;
+
+    return true;
+}
+
+/*
+3.21.16-19 (Page 40-41)
+
+AVID start [9:0] (combined registers 11h and 12h)
+01 1111 1111 = 511
+00 0000 0001 = 1
+00 0000 0000 = 0 (default)
+11 1111 1111 =–1
+10 0000 0000 =–512
+
+AVID stop [9:0] (combined registers 13h and 14h)
+01 1111 1111 = 511
+00 0000 0001 = 1
+00 0000 0000 = 0 (default) (see Figure 3-6 and Figure 3-7)
+11 1111 1111 =–1
+10 0000 0000 =–512
+
+When the LSB registerson are written to will the AVID offset update.
+
+- `start` is an offset from 0, going from -512 to 511.
+- `stop` is the same thing but for the stop pixel.
+
+Usually, we want to do a positive number for start and negative number for stop (in the example)
+ */
+bool tvp5151::set_crop_avid_horizontal(int16_t start_offset, int16_t stop_offset)
+{
+    if (start_offset > 511)
+        start_offset = 511;
+    if (start_offset < -512)
+        start_offset = -512;
+    if (stop_offset > 511)
+        stop_offset = 511;
+    if (stop_offset < -512)
+        stop_offset = -512;
+
+    uint16_t u_start = (uint16_t)start_offset & 0x03FF;
+    // bit shift to go from 10 bit to 8 bit (cut off first 2 bits)
+    if (!write_register(TVP_REG_AVID_CROP_START_MSB, (u_start >> 2) & 0xFF)) // Bits 9-2
+        return false;
+
+    if (!write_register(TVP_REG_AVID_CROP_START_LSB, u_start & 0x03)) // Bits 1-0 (Triggers update)
+        return false;
+
+    uint16_t u_stop = (uint16_t)stop_offset & 0x03FF;
+    if (!write_register(TVP_REG_AVID_CROP_STOP_MSB, (u_stop >> 2) & 0xFF))
+        return false;
+    if (!write_register(TVP_REG_AVID_CROP_STOP_LSB, u_stop & 0x03))
+        return false;
+
+    return true;
+}
+
+/*
+3.21.22 & 23 Vertical Blanking Start Register & Stop Register | Page (43-44)
+
+Vertical blanking (VBLK) start
+0111 1111 = 127 lines after start of vertical blanking interval
+0000 0001 = 1 line after start of vertical blanking interval
+0000 0000 = Same time as start of vertical blanking interval (default) (see Figure 3-5)
+1111 1111 = 1 line before start of vertical blanking interval
+1000 0000 = 128 lines before start of vertical blanking interval (or negative)
+
+Vertical blanking (VBLK) stop
+0111 1111 = 127 lines after stop of vertical blanking interval
+0000 0001 = 1 line after stop of vertical blanking interval
+0000 0000 = Same time as stop of vertical blanking interval (default) (see Figure 3-5)
+1111 1111 = 1 line before stop of vertical blanking interval
+1000 0000 = 128 lines before stop of vertical blanking interval
+
+8 Bit integer defines the offset
+*/
+bool tvp5151::set_crop_vblk_vertical(int8_t start_offset, int8_t stop_offset)
+{
+    if (start_offset > 127)
+        start_offset = 127;
+    if (start_offset < -128)
+        start_offset = -128;
+    if (stop_offset > 127)
+        stop_offset = 127;
+    if (stop_offset < -128)
+        stop_offset = -128;
+
+    if (!write_register(TVP_REG_VBLK_CROP_START, (uint8_t)start_offset))
+        return false;
+    if (!write_register(TVP_REG_VBLK_CROP_STOP, (uint8_t)stop_offset))
+        return false;
+    return true;
+}
 //--------------------------------------------------------------------------------------------------------------
 
 tvp_i2c_result_t tvp5151::read_register(uint8_t register_addr)
