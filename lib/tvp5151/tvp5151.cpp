@@ -195,6 +195,85 @@ bool tvp5151::read_vcr_mode()
     return read_register_bit(TVP_REG_STATUS_ONE, 0x01);
 }
 
+
+
+// 3.21.49 Status Register #2
+
+// 3.21.49 Status Register #2 || Bit 6 
+// Weak signal detection
+// 0 = No weak signal
+// 1 = Weak signal mode
+bool tvp5151::read_weak_signal(){
+    return read_register_bit(TVP_REG_STATUS_TWO, 0x40);
+}
+
+// 3.21.49 Status Register #2 || Bit 4 
+// Field sequence status
+// 0 = Even field (False)
+// 1 = Odd field (True)
+bool tvp5151::read_field_sequence_status(){
+    return read_register_bit(TVP_REG_STATUS_TWO, 0x10);
+}
+
+
+// 3.21.49 Status Register #2 || Bit 3
+// AGC and offset frozen status
+// 0 = AGC and offset are not frozen.
+// 1 = AGC and offset are frozen.
+bool tvp5151::read_AGC_frozen_status(){
+    return read_register_bit(TVP_REG_STATUS_TWO, 0x08);
+}
+
+
+
+// 3.21.50 Status Register #3
+// Analog gain: 4-bit front-end AGC analog gain setting
+// 0 ≤ analog_gain ≤ 15
+uint8_t tvp5151::read_analog_gain(){
+    tvp_i2c_result_t reg = read_register(TVP_REG_STATUS_THREE);
+    uint8_t analog_gain = reg.data &= 0xF0;
+    return analog_gain; 
+
+}
+// Digital gain: 4 MSBs of 6-bit front-end AGC digital gain setting
+// 0 ≤ digital_gain ≤ 63
+uint8_t tvp5151::read_digital_gain(){
+    tvp_i2c_result_t reg = read_register(TVP_REG_STATUS_THREE);
+    uint8_t digital_gain = reg.data &= 0x0F;
+    return digital_gain; 
+}
+ 
+// The product of the analog and digital gain is as follows:
+// Gain Product = (1 + 3 × analog_gain / 15) × (1 + gain_step × digital_gain / 4096)
+// The gain_step setting as a function of the analog_gain setting is shown in Table 3-15.
+uint8_t tvp5151::read_gain_product(){
+    uint8_t digital_gain = read_digital_gain();
+    uint8_t analog_gain = read_analog_gain();
+    uint8_t gain_product = (1+(3*(analog_gain/15))) * (1 + ((GAIN_STEP[analog_gain] * digital_gain)/4096));
+    return gain_product; 
+    
+}
+
+
+
+
+
+// 3.21.51 Status Register #4
+
+
+
+
+
+
+
+// 3.21.52 Status Register #5
+
+
+
+
+
+
+
 //--------------------------------------------------------------------------------------------------------------
 
 bool tvp5151::reset_miscellaneous_controls_register()
@@ -267,34 +346,17 @@ bool tvp5151::set_gpcl_output(bool enable_gpcl_output)
 
 
 
-// 3.21.44 Vertical Line Count MSB Register (the only useful bits are 1 and 0 so can I do the same thing of << 8 for MSB and then + LSB ?)
+// 3.21.44 Vertical Line Count MSB Register 
 // 3.21.45 Vertical Line Count LSB Register (Used for seeing how many lines per frame)
+uint16_t tvp5151::read_vertical_line_count(){
+    tvp_i2c_result_t read_reg_1 = read_register(TVP_VERTICAL_LINE_MSB);
+    uint8_t MSB_Bit = read_reg_1.data &= 0x03;
+    tvp_i2c_result_t read_reg_2 = read_register(TVP_VERTICAL_LINE_LSB);
+    uint8_t LSB_Bit = read_reg_2.data; 
+    uint16_t vertical_line_count = (MSB_Bit<<8) + LSB_Bit;
+    return vertical_line_count;
 
-
-// 3.21.49 Status Register #2
-
-// 3.21.49 Status Register #2 || Bit 6 
-// Weak signal detection
-// 0 = No weak signal
-// 1 = Weak signal mode
-bool tvp5151::read_weak_signal(){
-    return read_register_bit(TVP_REG_STATUS_TWO, 0x40);
 }
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
