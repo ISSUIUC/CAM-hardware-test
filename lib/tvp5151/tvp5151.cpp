@@ -227,6 +227,8 @@ bool tvp5151::read_AGC_frozen_status(){
 
 
 // 3.21.50 Status Register #3
+
+// 3.21.50 Status Register #3 || BIT 4-8 
 // Analog gain: 4-bit front-end AGC analog gain setting
 // 0 ≤ analog_gain ≤ 15
 uint8_t tvp5151::read_analog_gain(){
@@ -235,6 +237,7 @@ uint8_t tvp5151::read_analog_gain(){
     return analog_gain; 
 
 }
+// 3.21.50 Status Register #3 || BIT 0-3
 // Digital gain: 4 MSBs of 6-bit front-end AGC digital gain setting
 // 0 ≤ digital_gain ≤ 63
 uint8_t tvp5151::read_digital_gain(){
@@ -243,7 +246,9 @@ uint8_t tvp5151::read_digital_gain(){
     return digital_gain; 
 }
  
-// The product of the analog and digital gain is as follows:
+
+// 3.21.50 Status Register #3 
+// The product of the analog and digital gain is as follows: 
 // Gain Product = (1 + 3 × analog_gain / 15) × (1 + gain_step × digital_gain / 4096)
 // The gain_step setting as a function of the analog_gain setting is shown in Table 3-15.
 uint8_t tvp5151::read_gain_product(){
@@ -255,20 +260,40 @@ uint8_t tvp5151::read_gain_product(){
 }
 
 
-
-
-
 // 3.21.51 Status Register #4
 
 
-
-
-
+// Subcarrier to horizontal (SCH) phase (I don't think we need it)
 
 
 // 3.21.52 Status Register #5
+// This register contains information about the detected video standard at which the device is currently
+// operating. When autoswitch code is running, this register must be tested to determine which video
+// standard has been detected.
 
 
+// 3.21.52 Status Register #5 || Bit 7
+bool tvp5151::read_autoswitch_mode(){   
+    return read_register_bit(TVP_REG_STATUS_FIVE, 0x80);
+}
+
+
+// 3.21.52 Status Register #5 || Bit 0-3
+VideoStandard tvp5151::read_video_standard(){
+    tvp_i2c_result_t value = read_register(TVP_REG_STATUS_FIVE);
+
+    uint8_t video_bit_val = value.data &= 0x0F;
+
+    switch(video_bit_val){
+        case 0b001: return VideoStandard::NTSC_M_J;
+        case 0b011: return VideoStandard::PAL_BDGHI_N;
+        case 0b101: return VideoStandard::PAL_M;
+        case 0b111: return VideoStandard::PAL_Nc;
+        case 0b1001: return VideoStandard::NTSC_443;
+        case 0b1011: return VideoStandard::SECAM;
+        default: return VideoStandard::RESERVED; 
+    }
+}
 
 
 

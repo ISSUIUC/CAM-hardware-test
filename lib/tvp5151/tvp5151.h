@@ -19,12 +19,13 @@ enum TVP_I2C_ERROR
 };
 
 enum class VideoStandard : uint8_t {
+    RESERVED     = 0b000, 
     NTSC_M_J     = 0b001, // (M, J) NTSC ITU-R BT.601
     PAL_BDGHI_N  = 0b011, // PAL B,D,G,H,I,N
     PAL_M        = 0b101,
     PAL_Nc       = 0b111,
-    NTSC_443     = 0b1001 >> 1, // still stored as [3:1]
-    SECAM        = 0b1011 >> 1
+    NTSC_443     = 0b1001, 
+    SECAM        = 0b1011
 };
 
 
@@ -165,7 +166,7 @@ public:
     //------
     
     bool read_autoswitch_mode();
-
+    VideoStandard read_video_standard();
 
     //------
 
