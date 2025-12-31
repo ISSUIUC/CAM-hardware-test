@@ -42,7 +42,7 @@ private:
     static constexpr uint8_t TVP_REG_AVID_CROP_STOP_MSB = 0x13;
     static constexpr uint8_t TVP_REG_AVID_CROP_STOP_LSB = 0x14;
     static constexpr uint8_t TVP_REG_VBLK_CROP_START = 0x18;
-    static constexpr uint8_t TVP_REG_VBLK_CROP_STOP = 0x18;
+    static constexpr uint8_t TVP_REG_VBLK_CROP_STOP = 0x19;
 
     static constexpr uint8_t TVP_REF_CB_GAIN_FACTOR = 0x2C;
     static constexpr uint8_t TVP_REF_CR_GAIN_FACTOR = 0x2D;
