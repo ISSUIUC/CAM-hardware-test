@@ -91,7 +91,6 @@ public:
     // TODO: UNTESTED
     //------
 
-    bool set_gpcl_output(bool enable_gpcl_output);
     bool set_gpcl_logic_level(bool level);
     bool set_ycbcr_output_enable(bool enable_ycbcr_output);
     bool set_clock_output_enable(bool enable_clock);
@@ -104,6 +103,9 @@ public:
 
     bool set_crop_avid_horizontal(int16_t start, int16_t stop);
     bool set_crop_vblk_vertical(int8_t start_offset, int8_t stop_offset);
+    bool set_avid_output_enable(bool enable);
+    bool set_gpcl_or_vblk_output(bool enable_gpcl_output);
+    bool set_avid_out_active_during_vblk(bool active);
     bool reset_crop();
 
     //------

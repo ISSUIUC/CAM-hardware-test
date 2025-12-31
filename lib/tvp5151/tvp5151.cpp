@@ -235,36 +235,6 @@ bool tvp5151::set_gpcl_logic_level(bool level)
     return modify_register_bit(TVP_REG_MISC_CONTROLS, 0x40, level);
 }
 
-/*
-3.21.4 Miscellaneous Controls Register | Bit 5 & 7(Page 31)
-Bit 5: INTREQ/GPCL/VBLK output enable
-0 = Output disabled (default)
-1 = Output enabled (recommended)
-Bit 7:
-VBLK/GPCL function select (affects INTREQ/GPCL/VBLK output only if bit 1 of I2C register 0Fh is set to
-1)
-0 = GPCL (default)
-1 = VBLK
-
-3.21.15 Configuration Shared Pins Register | Bit 1 (Page 40)
-INTREQ/GPCL/VBLK (pin 27) function select
-0 = INTREQ (default)
-1 = GPCL or VBLK depending on bit 7 of register 03h
-*/
-bool tvp5151::set_gpcl_output(bool enable_gpcl_output)
-{
-    // Select GPCL/VBLK function in the shared pin register
-    if (!write_register(TVP_REG_CONFIG_SHARED_PINS, 0x02))
-        return false;
-
-    // Enable the output driver (Bit 5)
-    if (!modify_register_bit(TVP_REG_MISC_CONTROLS, 0x20, true))
-        return false;
-
-    // Set Bit 7: 0 for GPCL, 1 for VBLK
-    return modify_register_bit(TVP_REG_MISC_CONTROLS, 0x80, !enable_gpcl_output);
-}
-
 //--------------------------Cropping STUFF------------------------------------------------------------------------------------
 /*
 Read section 3.13 graph.
@@ -289,6 +259,90 @@ bool tvp5151::reset_crop()
         return false;
 
     return true;
+}
+
+/*
+
+3.21.6 Miscellaneous Output Controls Register | Bit 1 (Page 34)
+AVID/CLK_IN function select
+0 = CLK_IN (default)
+1 = AVID
+
+3.21.4 Miscellaneous Controls Register | Bit 2 (Page 31)
+HSYNC, VSYNC/PALI, active video indicator (AVID), and FID/GLCO output enables
+0 = HSYNC, VSYNC/PALI, AVID, and FID/GLCO are high-impedance (default).
+1 = HSYNC, VSYNC/PALI, AVID, and FID/GLCO are active.
+Note: This control bit has no effect on the FID/GLCO output when it is programmed to output the
+GLCO signal (see bit 3 of address 0Fh). When the GLCO signal is selected, the FID/GLCO output is
+always active.
+
+This should be enabled/used as the H_ENABLE pin for horizontal syncing.
+
+
+This function changes two registers' bits' values.
+*/
+bool tvp5151::set_avid_output_enable(bool enable)
+{
+
+    if (!modify_register_bit(TVP_REG_MISC_OUTPUT_CONTROLS, 0x02, true))
+        return false;
+    if (!set_ycbcr_output_enable(true))
+        return false;
+    if (!set_clock_output_enable(true))
+        return false;
+
+    return modify_register_bit(TVP_REG_MISC_CONTROLS, 0x04, enable);
+}
+
+/*
+3.21.15 Configuration Shared Pins Register | Bit 1 (Page 40)
+INTREQ/GPCL/VBLK (pin 27) function select
+0 = INTREQ (default)
+1 = GPCL or VBLK depending on bit 7 of register 03h
+
+3.21.4 Miscellaneous Controls Register | Bit 5 & 7(Page 31)
+
+Bit 5: INTREQ/GPCL/VBLK output enable
+0 = Output disabled (default)
+1 = Output enabled (recommended)
+
+Bit 7:
+VBLK/GPCL function select (affects INTREQ/GPCL/VBLK output only if bit 1 of I2C register 0Fh is set to
+1)
+0 = GPCL (default)
+1 = VBLK
+*/
+bool tvp5151::set_gpcl_or_vblk_output(bool enable_gpcl_output)
+{
+    // Select GPCL/VBLK function in the shared pin register
+    if (!write_register(TVP_REG_CONFIG_SHARED_PINS, 0x02))
+        return false;
+
+    // Enable the output driver (Bit 5)
+    if (!modify_register_bit(TVP_REG_MISC_CONTROLS, 0x20, true))
+        return false;
+
+    // Set Bit 7: 0 for GPCL, 1 for VBLK
+    return modify_register_bit(TVP_REG_MISC_CONTROLS, 0x80, !enable_gpcl_output);
+}
+
+/*
+3.21.17 Active Video Cropping Start Pixel LSB Register | Bit 2 (Page 41)
+AVID active
+0 = AVID out active in VBLK (default)
+1 = AVID out inactive in VBLK
+Active video cropping start pixel LSB [1:0]: The TVP5151 decoder updates the AVID start values only
+when this register is written to.
+
+This setting controls how the AVID signal behaves during the Vertical Blanking Interval (VBLK). The Vertical Blanking Interval is the "dead time" between frames where no viewable video is sent.
+
+    0 = AVID out active in VBLK (default): In this mode, the AVID signal continues to pulse high for every line, even during the vertical blanking period. This is often used if downstream hardware needs a consistent timing reference for every single line of the signal, regardless of whether it contains "real" video.
+
+    1 = AVID out inactive in VBLK: In this mode, the AVID signal is forced to logic low (inactive) for the entire duration of the vertical blanking interval. It only begins pulsing again when the first line of "active" video begins. This is very useful for processors because it tells the hardware, "Stop looking for data until the vertical blanking is over."
+*/
+bool tvp5151::set_avid_out_active_during_vblk(bool active)
+{
+    return modify_register_bit(TVP_REG_AVID_CROP_START_LSB, 0x04, !active);
 }
 
 /*
@@ -330,7 +384,6 @@ bool tvp5151::set_crop_avid_horizontal(int16_t start_offset, int16_t stop_offset
     // bit shift to go from 10 bit to 8 bit (cut off first 2 bits)
     if (!write_register(TVP_REG_AVID_CROP_START_MSB, (u_start >> 2) & 0xFF)) // Bits 9-2
         return false;
-
     if (!write_register(TVP_REG_AVID_CROP_START_LSB, u_start & 0x03)) // Bits 1-0 (Triggers update)
         return false;
 
