@@ -3,13 +3,11 @@
 #include <stdbool.h>
 
 
+LCD_CAM_Module::LCD_CAM_Module()
+{
 
 
-LCD_CAM_Module::LCD_CAM_Module(){
 }
-
-
-
 
 
 uint32_t read_register(uint32_t reg){ // Just a test function 
@@ -51,7 +49,7 @@ void LCD_CAM_Module::rmw_reg(uint32_t reg, uint32_t clear_mask, uint32_t set_mas
 void LCD_CAM_Module::set_width_input_data(bool set){
     if(set){
         // Set width input data 8 bits.
-        rmw_reg(LCDCAM_CAM_CTRL1_REG, LCDCAM_CAM_VSYNC_FILTER_EN, LCDCAM_CAM_VSYNC_FILTER_EN);
+        rmw_reg(LCDCAM_CAM_CTRL1_REG, LCDCAM_CAM_2BYTE_EN, LCDCAM_CAM_2BYTE_EN);
     }
 
 }
@@ -182,5 +180,4 @@ esp_err_t LCD_CAM_Module::cam_controller_configure_gpio_matrix(){
     return ESP_OK;
 
 }
-
 
