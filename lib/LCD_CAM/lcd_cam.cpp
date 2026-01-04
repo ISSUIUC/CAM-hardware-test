@@ -1,8 +1,15 @@
-#include <lcd_cam_reg.h>
-
-
+#include <lcd_cam.h>
 #include <stdint.h>
 #include <stdbool.h>
+
+
+
+
+LCD_CAM_Module::LCD_CAM_Module(){
+}
+
+
+
 
 
 uint32_t read_register(uint32_t reg){ // Just a test function 
@@ -10,17 +17,20 @@ uint32_t read_register(uint32_t reg){ // Just a test function
 } 
 
 
+
+
+
 // Read, Modify, Write 
-void rmw_reg(uint32_t reg, uint32_t clear_mask, uint32_t set_mask){
+void LCD_CAM_Module::rmw_reg(uint32_t reg, uint32_t clear_mask, uint32_t set_mask){
     uint32_t current = REG_READ(reg);
     current &=  ~clear_mask; 
     current |= set_mask; 
     REG_WRITE(reg, current);
+
 }
 
 
 // Register 9.43. IO_MUX_GPIOn_REG (n: 0 - 54) (0x0004+4*n)
-
 
 
 
@@ -33,14 +43,12 @@ void rmw_reg(uint32_t reg, uint32_t clear_mask, uint32_t set_mask){
 
 
 
-
-
 // Register 36.13. LCD_CAM_CAM_CTRL1_REG (0x0008) (Begins line 170 in lcd_cam_reg.h)
 
 // LCD_CAM_CAM_2BYTE_EN Configures the width of input data. || Bit 24 || (R/W)
 // 0: 8 bits. (FALSE) -> Default
 // 1: 16 bits. (TRUE)
-void set_width_input_data(bool set){
+void LCD_CAM_Module::set_width_input_data(bool set){
     if(set){
         // Set width input data 8 bits.
         rmw_reg(LCDCAM_CAM_CTRL1_REG, LCDCAM_CAM_VSYNC_FILTER_EN, LCDCAM_CAM_VSYNC_FILTER_EN);
@@ -52,22 +60,127 @@ void set_width_input_data(bool set){
 //LCD_CAM_CAM_START Camera module start signal. || (R/W) 
 // 0: -> Default (OFF) (FALSE)
 // 1: -> ON (TRUE)
-void initialize_cam_ctrl(bool set){
+void LCD_CAM_Module::initialize_cam_ctrl(bool set){
     if(set){
         // Initialize cam controller 
         rmw_reg(LCDCAM_CAM_CTRL1_REG, LCDCAM_CAM_START, LCDCAM_CAM_START);
+    }
+    else{
+        // clear CAM Start bit. 
+        rmw_reg(LCDCAM_CAM_CTRL1_REG, LCDCAM_CAM_START, 0);
+
     }
 }
 
 
 // LCD_CAM_CAM_RESET When set to 1, the Camera module is reset. (WO)
 
-void reset_cam_ctrl(bool reset){
+void LCD_CAM_Module::reset_cam_ctrl(bool reset){
     if(reset){
         // reset cam controller 
         rmw_reg(LCDCAM_CAM_CTRL1_REG, LCDCAM_CAM_RESET, LCDCAM_CAM_RESET);
     }
 }
 
+
+void LCD_CAM_Module::full_reboot_cam_ctrl(){
+    initialize_cam_ctrl(false); // stop cam controller 
+
+    reset_cam_ctrl(true); // reset cam controller
+
+    initialize_cam_ctrl(true); // turn on cam controller
+}
+
+// LCD_CAM_CAM_VH_DE_MODE_EN Configures the input control signals. (Bit 28)
+// 0: VSYNC and DE signals control the data. In this case, wiring HSYNC signal line is not a must.
+// But in this case, the YUV-RGB conversion function of the camera module is not available.
+// 1: VSYNC, HSYNC, and DE signals control the data. In this case, users need to wire the three
+// signal lines.
+// (R/W)
+
+
+void LCD_CAM_Module::toggle_lcd_cam_vh_de_mode(bool toggle){
+    // ESP_ERROR_CHECK()
+
+
+
+}
+
+
+// /**
+//  * @brief Combine a GPIO input with a peripheral signal, which tagged as input attribute.
+//  *
+//  * @note There's no limitation on the number of signals that a GPIO can combine with.
+//  *
+//  * @param gpio_num GPIO number, especially, `GPIO_MATRIX_CONST_ZERO_INPUT` means connect logic 0 to signal
+//  *                                          `GPIO_MATRIX_CONST_ONE_INPUT` means connect logic 1 to signal
+//  * @param signal_idx Peripheral signal index (tagged as input attribute)
+//  * @param inv  Whether the GPIO input to be inverted or not
+//  */
+// void esp_rom_gpio_connect_in_signal(uint32_t gpio_num, uint32_t signal_idx, bool inv);
+
+
+
+static esp_err_t cam_config_gpio(uint32_t gpio, uint32_t index){
+
+    // configure gpio pins
+    gpio_config_t cfg = {
+        .pin_bit_mask = 1ULL << gpio,
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    
+    esp_err_t err = gpio_config(&cfg); // the address / location in memory of cfg
+    if (err!=ESP_OK){
+        return err;
+    }
+
+    // set gpio p in to assigned index
+    esp_rom_gpio_connect_in_signal(gpio, index, false);
+
+    return ESP_OK;
+}
+
+
+esp_err_t LCD_CAM_Module::cam_controller_configure_gpio_matrix(){
+
+    esp_err_t err; 
+
+    // Toggle Camera Input
+    for (int i = 0; i < 8; i++)
+    {
+    err = cam_config_gpio(YOUT[i], YOUT_SIGNAL_INDEX[i]);
+    if(err!=ESP_OK){
+        return err;
+    }
+    }
+
+    // Toggle H_Sync Input
+    err= cam_config_gpio(TVP5151_HSYNC, CAM_H_SYNC_PAD_IN_IDX);
+    if(err!=ESP_OK){
+        return err;
+    }
+
+    // Toggle V_Sync Input
+    err =cam_config_gpio(TVP5151_VSYNC, CAM_V_SYNC_PAD_IN_IDX);
+    if(err!=ESP_OK){
+        return err;
+    }
+
+    // Toggle Pixel Clock Input
+    err =cam_config_gpio(TVP5151_SCLK, CAM_PCLK_PAD_IN_IDX);
+    if(err!=ESP_OK){
+        return err;
+    }
+
+    // Toggle DE_Signal Input  (ALWAYS HIGH)
+    esp_rom_gpio_connect_in_signal(GPIO_MATRIX_CONST_ONE_INPUT, CAM_DE_SIGNAL, false);
+    
+
+    return ESP_OK;
+
+}
 
 

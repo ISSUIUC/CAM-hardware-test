@@ -106,15 +106,15 @@ extern "C" {
 #define LCDCAM_CAM_UPDATE_REG_V  0x00000001U
 #define LCDCAM_CAM_UPDATE_REG_S  4
 /** LCDCAM_CAM_BYTE_ORDER : R/W; bitpos: [5]; default: 0;
- *  1: Change data bit order, change CAM_DATA_in[7:0] to CAM_DATA_in[0:7] in one byte
- *  mode, and bits[15:0] to bits[0:15] in two byte mode.  0: Not change.
+ *  1: invert data byte order. 0: Not change.
  */
 #define LCDCAM_CAM_BYTE_ORDER    (BIT(5))
 #define LCDCAM_CAM_BYTE_ORDER_M  (LCDCAM_CAM_BYTE_ORDER_V << LCDCAM_CAM_BYTE_ORDER_S)
 #define LCDCAM_CAM_BYTE_ORDER_V  0x00000001U
 #define LCDCAM_CAM_BYTE_ORDER_S  5
 /** LCDCAM_CAM_BIT_ORDER : R/W; bitpos: [6]; default: 0;
- *  1: invert data byte order, only valid in 2 byte mode. 0: Not change.
+ *  1: Change data bit order, change CAM_DATA_in[7:0] to CAM_DATA_in[0:7] in one byte
+ *  mode, and bits[15:0] to bits[0:15] in two byte mode.  0: Not change.
  */
 #define LCDCAM_CAM_BIT_ORDER    (BIT(6))
 #define LCDCAM_CAM_BIT_ORDER_M  (LCDCAM_CAM_BIT_ORDER_V << LCDCAM_CAM_BIT_ORDER_S)
@@ -328,6 +328,13 @@ extern "C" {
  *  LCD YUV/RGB converter configuration register.
  */
 #define LCDCAM_LCD_RGB_YUV_REG (DR_REG_LCDCAM_BASE + 0x10)
+/** LCDCAM_LCD_CONV_RGB2RGB_MODE : R/W; bitpos: [19:18]; default: 3;
+ *  0:rgb888 trans to rgb565. 1:rgb565 trans to rgb888.2,3:disabled
+ */
+#define LCDCAM_LCD_CONV_RGB2RGB_MODE    0x00000003U
+#define LCDCAM_LCD_CONV_RGB2RGB_MODE_M  (LCDCAM_LCD_CONV_RGB2RGB_MODE_V << LCDCAM_LCD_CONV_RGB2RGB_MODE_S)
+#define LCDCAM_LCD_CONV_RGB2RGB_MODE_V  0x00000003U
+#define LCDCAM_LCD_CONV_RGB2RGB_MODE_S  18
 /** LCDCAM_LCD_CONV_8BITS_DATA_INV : R/W; bitpos: [20]; default: 0;
  *  1:invert every two 8bits input data. 2. disabled.
  */
@@ -343,16 +350,15 @@ extern "C" {
 #define LCDCAM_LCD_CONV_TXTORX_V  0x00000001U
 #define LCDCAM_LCD_CONV_TXTORX_S  21
 /** LCDCAM_LCD_CONV_YUV2YUV_MODE : R/W; bitpos: [23:22]; default: 3;
- *  0: to yuv422. 1: to yuv420. 2: to yuv411. 3: disabled.  To enable yuv2yuv mode,
- *  trans_mode must be set to 1.
+ *  0: to yuv422.  2: to yuv411. 1,3: disabled.  To enable yuv2yuv mode, trans_mode
+ *  must be set to 1.
  */
 #define LCDCAM_LCD_CONV_YUV2YUV_MODE    0x00000003U
 #define LCDCAM_LCD_CONV_YUV2YUV_MODE_M  (LCDCAM_LCD_CONV_YUV2YUV_MODE_V << LCDCAM_LCD_CONV_YUV2YUV_MODE_S)
 #define LCDCAM_LCD_CONV_YUV2YUV_MODE_V  0x00000003U
 #define LCDCAM_LCD_CONV_YUV2YUV_MODE_S  22
 /** LCDCAM_LCD_CONV_YUV_MODE : R/W; bitpos: [25:24]; default: 0;
- *  0: yuv422. 1: yuv420. 2: yuv411. When in yuv2yuv mode, yuv_mode decides the yuv
- *  mode of Data_in
+ *  0: yuv422. 2: yuv411. When in yuv2yuv mode, yuv_mode decides the yuv mode of Data_in
  */
 #define LCDCAM_LCD_CONV_YUV_MODE    0x00000003U
 #define LCDCAM_LCD_CONV_YUV_MODE_M  (LCDCAM_LCD_CONV_YUV_MODE_V << LCDCAM_LCD_CONV_YUV_MODE_S)
@@ -1028,6 +1034,13 @@ extern "C" {
 #define LCDCAM_CAM_HS_INT_ENA_M  (LCDCAM_CAM_HS_INT_ENA_V << LCDCAM_CAM_HS_INT_ENA_S)
 #define LCDCAM_CAM_HS_INT_ENA_V  0x00000001U
 #define LCDCAM_CAM_HS_INT_ENA_S  3
+/** LCDCAM_LCD_UNDERRUN_INT_ENA : R/W; bitpos: [4]; default: 0;
+ *  The enable bit for LCD underrun interrupt
+ */
+#define LCDCAM_LCD_UNDERRUN_INT_ENA    (BIT(4))
+#define LCDCAM_LCD_UNDERRUN_INT_ENA_M  (LCDCAM_LCD_UNDERRUN_INT_ENA_V << LCDCAM_LCD_UNDERRUN_INT_ENA_S)
+#define LCDCAM_LCD_UNDERRUN_INT_ENA_V  0x00000001U
+#define LCDCAM_LCD_UNDERRUN_INT_ENA_S  4
 
 /** LCDCAM_LC_DMA_INT_RAW_REG register
  *  LCDCAM interrupt raw register, valid in level.
@@ -1061,6 +1074,13 @@ extern "C" {
 #define LCDCAM_CAM_HS_INT_RAW_M  (LCDCAM_CAM_HS_INT_RAW_V << LCDCAM_CAM_HS_INT_RAW_S)
 #define LCDCAM_CAM_HS_INT_RAW_V  0x00000001U
 #define LCDCAM_CAM_HS_INT_RAW_S  3
+/** LCDCAM_LCD_UNDERRUN_INT_RAW : RO/WTC/SS; bitpos: [4]; default: 0;
+ *  The raw bit for LCD underrun interrupt
+ */
+#define LCDCAM_LCD_UNDERRUN_INT_RAW    (BIT(4))
+#define LCDCAM_LCD_UNDERRUN_INT_RAW_M  (LCDCAM_LCD_UNDERRUN_INT_RAW_V << LCDCAM_LCD_UNDERRUN_INT_RAW_S)
+#define LCDCAM_LCD_UNDERRUN_INT_RAW_V  0x00000001U
+#define LCDCAM_LCD_UNDERRUN_INT_RAW_S  4
 
 /** LCDCAM_LC_DMA_INT_ST_REG register
  *  LCDCAM interrupt status register.
@@ -1094,6 +1114,13 @@ extern "C" {
 #define LCDCAM_CAM_HS_INT_ST_M  (LCDCAM_CAM_HS_INT_ST_V << LCDCAM_CAM_HS_INT_ST_S)
 #define LCDCAM_CAM_HS_INT_ST_V  0x00000001U
 #define LCDCAM_CAM_HS_INT_ST_S  3
+/** LCDCAM_LCD_UNDERRUN_INT_ST : RO; bitpos: [4]; default: 0;
+ *  The status bit for LCD underrun interrupt
+ */
+#define LCDCAM_LCD_UNDERRUN_INT_ST    (BIT(4))
+#define LCDCAM_LCD_UNDERRUN_INT_ST_M  (LCDCAM_LCD_UNDERRUN_INT_ST_V << LCDCAM_LCD_UNDERRUN_INT_ST_S)
+#define LCDCAM_LCD_UNDERRUN_INT_ST_V  0x00000001U
+#define LCDCAM_LCD_UNDERRUN_INT_ST_S  4
 
 /** LCDCAM_LC_DMA_INT_CLR_REG register
  *  LCDCAM interrupt clear register.
@@ -1127,12 +1154,19 @@ extern "C" {
 #define LCDCAM_CAM_HS_INT_CLR_M  (LCDCAM_CAM_HS_INT_CLR_V << LCDCAM_CAM_HS_INT_CLR_S)
 #define LCDCAM_CAM_HS_INT_CLR_V  0x00000001U
 #define LCDCAM_CAM_HS_INT_CLR_S  3
+/** LCDCAM_LCD_UNDERRUN_INT_CLR : WT; bitpos: [4]; default: 0;
+ *  The clear bit for LCD underrun interrupt
+ */
+#define LCDCAM_LCD_UNDERRUN_INT_CLR    (BIT(4))
+#define LCDCAM_LCD_UNDERRUN_INT_CLR_M  (LCDCAM_LCD_UNDERRUN_INT_CLR_V << LCDCAM_LCD_UNDERRUN_INT_CLR_S)
+#define LCDCAM_LCD_UNDERRUN_INT_CLR_V  0x00000001U
+#define LCDCAM_LCD_UNDERRUN_INT_CLR_S  4
 
 /** LCDCAM_LC_REG_DATE_REG register
  *  Version register
  */
 #define LCDCAM_LC_REG_DATE_REG (DR_REG_LCDCAM_BASE + 0xfc)
-/** LCDCAM_LC_DATE : R/W; bitpos: [27:0]; default: 36712592;
+/** LCDCAM_LC_DATE : R/W; bitpos: [27:0]; default: 38806054;
  *  LCD_CAM version control register
  */
 #define LCDCAM_LC_DATE    0x0FFFFFFFU

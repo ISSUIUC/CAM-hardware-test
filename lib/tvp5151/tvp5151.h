@@ -1,6 +1,8 @@
 #include <Wire.h>
 #include <Arduino.h>
 
+
+
 // Type defs
 enum CAM_SELECT
 {
@@ -54,6 +56,9 @@ private:
 
     static constexpr uint8_t TVP_VERTICAL_LINE_MSB = 0X84;
     static constexpr uint8_t TVP_VERTICAL_LINE_LSB = 0X85;
+
+    static constexpr uint8_t TVP_OUTPUT_DATA_SELECT = 0X0D;
+
     
     // Status Registers 
 

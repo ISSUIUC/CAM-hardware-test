@@ -1,5 +1,7 @@
 #include <tvp5151.h>
 
+
+
 tvp5151::tvp5151(uint8_t pdn, uint8_t reset, uint8_t addr, TwoWire *i2c)
 {
     _i2c_addr = addr;
@@ -49,16 +51,15 @@ uint16_t tvp5151::read_device_id()
     return device_id;
 }
 
-// for the registers should I have a boolean for each bit such as black output if I want it on or should this just select camera in which it's decoding? I think the latter
 bool tvp5151::source_select(CAM_SELECT CAM)
 {
 
-    if (CAM)
-    { // CAM1 (AIP1B)
+    if (CAM2)
+    { // CAM2 (AIP1B)
         return write_register(TVP_INPUT_SOURCE_SELECTION, 0x02);
     }
     else
-    { // CAM0 (AIP1A)
+    { // CAM1 (AIP1A)
         return write_register(TVP_INPUT_SOURCE_SELECTION, 0x00);
     }
 }
@@ -355,6 +356,21 @@ INTREQ/GPCL/VBLK (pin 27) function select
 0 = INTREQ (default)
 1 = GPCL or VBLK depending on bit 7 of register 03h
 */
+
+
+// 3.21.13 Outputs and Data Rates Select Register
+
+// YCbCr output format 
+// 000 = 8-bit 4:2:2 YCbCr with discrete sync output
+// 001 = Reserved
+// 010 = Reserved
+// 011 = Reserved
+// 100 = Reserved
+// 101 = Reserved
+// 110 = Reserved
+// 111 = 8-bit ITU-R BT.656 interface with embedded sync output (default)
+
+
 bool tvp5151::set_gpcl_output(bool enable_gpcl_output)
 {
     // Select GPCL function in the shared pin register

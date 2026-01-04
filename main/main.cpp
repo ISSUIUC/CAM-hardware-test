@@ -14,6 +14,7 @@ USBCDC USBSerial;
 #include <RHSoftwareSPI.h>
 #include <RHHardwareSPI.h>
 #include <tvp5151.h>
+#include <lcd_cam_reg.h>
 
 #include "esp_h264_enc_single.h"
 
@@ -23,6 +24,12 @@ USBCDC USBSerial;
 // #define C_ENABLE_BUZZER
 // #define C_ENABLE_CAM_CONTROL
 #define C_ENABLE_TVP_DECODE
+
+// #define CAM1_Select
+// #define CAM2_Select
+
+// #define C_ENABLE_LCD_CAM_CONTROLLER
+
 
 // RHSoftwareSPI _rspi;
 // RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
@@ -98,6 +105,37 @@ void setup()
         };
     }
 
+    #ifdef CAM1_Select
+
+    if (!tvp.source_select(CAM1))
+    {
+        Serial.println("CAM 1 failed to select.");
+        while (1)
+        {
+        };
+    }
+    #endif
+
+    #ifdef CAM2_Select
+
+    if (!tvp.source_select(CAM2))
+    {
+        Serial.println("CAM 2 failed to select.");
+        while (1)
+        {
+        };
+    }
+    #endif
+
+
+
+
+
+
+
+
+
+
     // Test all read functions
     Serial.println("\n=== TVP5151 Read Functions Test ===\n");
 
@@ -150,6 +188,12 @@ void setup()
     Serial.println(lock_interrupt ? "YES" : "NO");
 
     Serial.println("\n=== Test Complete ===\n");
+
+    bool weak_signal = tvp.read_weak_signal();
+    Serial.print("Weak Signal Detection: ");
+    Serial.println(weak_signal ? "Weak Signal Mode" : "No Weak Signal");
+
+
 
     // Test all write functions
     Serial.println("\n=== TVP5151 Write Functions Test ===\n");
@@ -215,7 +259,11 @@ void setup()
 
     Serial.println("\n=== Write Functions Test Complete ===\n");
 
+
+
+
 #endif
+
 
 #ifdef C_ENABLE_CAM_CONTROL
     pinMode(CAM1_ON_OFF, OUTPUT);
@@ -231,6 +279,23 @@ void setup()
     digitalWrite(LED_RED, HIGH);
 
 #endif
+
+
+#ifdef C_ENABLE_LCD_CAM_CONTROLLER
+    // test read register value
+    print(read_register())
+    
+
+    // Set up GPIO Matrix...
+
+
+
+
+
+
+
+#endif
+
 
     Serial.println("init");
     init_tasks();
