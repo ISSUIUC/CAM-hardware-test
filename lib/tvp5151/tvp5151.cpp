@@ -612,7 +612,7 @@ bool tvp5151::write_register(uint8_t register_addr, uint8_t data)
     uint8_t error = _i2c->endTransmission(true);
     if (error)
     {
-        Serial.println("[ERROR] I2C read failed on write_register");
+        Serial.println("[ERROR] I2C write failed on write_register");
         print_I2C_error(categorize_error(error));
         return false;
     }
