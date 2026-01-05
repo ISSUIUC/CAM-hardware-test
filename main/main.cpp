@@ -30,7 +30,6 @@ USBCDC USBSerial;
 
 // #define C_ENABLE_LCD_CAM_CONTROLLER
 
-
 // RHSoftwareSPI _rspi;
 // RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
 
@@ -105,7 +104,7 @@ void setup()
         };
     }
 
-    #ifdef CAM1_Select
+#ifdef CAM1_Select
 
     if (!tvp.source_select(CAM1))
     {
@@ -114,9 +113,9 @@ void setup()
         {
         };
     }
-    #endif
+#endif
 
-    #ifdef CAM2_Select
+#ifdef CAM2_Select
 
     if (!tvp.source_select(CAM2))
     {
@@ -125,16 +124,7 @@ void setup()
         {
         };
     }
-    #endif
-
-
-
-
-
-
-
-
-
+#endif
 
     // Test all read functions
     Serial.println("\n=== TVP5151 Read Functions Test ===\n");
@@ -193,8 +183,6 @@ void setup()
     Serial.print("Weak Signal Detection: ");
     Serial.println(weak_signal ? "Weak Signal Mode" : "No Weak Signal");
 
-
-
     // Test all write functions
     Serial.println("\n=== TVP5151 Write Functions Test ===\n");
 
@@ -236,18 +224,29 @@ void setup()
 
     // Test GPCL output
     Serial.println("Testing set_gpcl_output(true)...");
-    if (tvp.set_gpcl_output(true))
+    if (tvp.set_gpcl_logic_level(true))
     {
-        Serial.println("✓ GPCL output configured successfully");
+        Serial.println("✓ GPCL logic level is now high");
     }
     else
     {
-        Serial.println("✗ Failed to configure GPCL output");
+        Serial.println("✗ Failed");
+    }
+    delay(100);
+
+    Serial.println("Testing set_gpcl_or_vblk_output(false)... (meaning vblk output true)");
+    if (tvp.set_gpcl_or_vblk_output(false))
+    {
+        Serial.println("✓ Vblk is now outputting");
+    }
+    else
+    {
+        Serial.println("✗ failed");
     }
     delay(100);
 
     Serial.println("Testing set_gpcl_output(true)...");
-    if (tvp.set_gpcl_output(true))
+    if (tvp.set_avid_output_enable(true))
     {
         Serial.println("✓ GPCL output configured successfully");
     }
@@ -302,11 +301,7 @@ void setup()
 
     Serial.println("\n=== Write Functions Test Complete ===\n");
 
-
-
-
 #endif
-
 
 #ifdef C_ENABLE_CAM_CONTROL
     pinMode(CAM1_ON_OFF, OUTPUT);
@@ -323,24 +318,15 @@ void setup()
 
 #endif
 
-
 #ifdef C_ENABLE_LCD_CAM_CONTROLLER
     // test read register value
     print(read_register())
-    
 
     // Set up GPIO Matrix...
 
-
-
-
-
-
-
 #endif
 
-
-    Serial.println("init");
+        Serial.println("init");
     init_tasks();
 }
 
