@@ -14,7 +14,10 @@ USBCDC USBSerial;
 #include <RHSoftwareSPI.h>
 #include <RHHardwareSPI.h>
 #include <tvp5151.h>
-#include <lcd_cam_reg.h>
+#include <lcd_cam.h> // kacper's code used for setting GPIO Matrix, can test initialize CAM Controller if esp_cam_ctlr doesn't work 
+#include <esp_cam_ctlr.h> // esp code for cam controller 
+#include "esp_cam_ctlr_types.h" // for defining transaction type
+
 
 #include "esp_h264_enc_single.h"
 
@@ -22,19 +25,61 @@ USBCDC USBSerial;
 #define CORE_1 1
 
 // #define C_ENABLE_BUZZER
-// #define C_ENABLE_CAM_CONTROL
+
+
+
+
 #define C_ENABLE_TVP_DECODE
 
-// #define CAM1_Select
 // #define CAM2_Select
 
+
+
+// Video Test Pipeline #1 || TVP5151 Setup:
+
+    // TVP5151 Setup + Camera Init
+
+// #define C_ENABLE_CAM_CONTROL
+// #define CAM1_Select
+// #define C_ENABLE_TVP_DECODE
+
+
+// Video Test Pipeline #2 || TVP5151 Setup + CAM_Controller Initization + Output YUV422 
+
+    // TVP5151 Setup + Camera Init
+// #define C_ENABLE_CAM_CONTROL
+// #define CAM1_Select
+// #define C_ENABLE_TVP_DECODE
+
+
+    // Set-up GPIO Matrix of ESP32 P4 || Initialize CAM Controller using esp driver 
+
 // #define C_ENABLE_LCD_CAM_CONTROLLER
+
+
+
+
+
+
+
+
+
+
+
+// Video Test Pipeline #3 
+    // TVP5151 Setup + CAM_Controller Initization + Format Conversion YUV422 > YUV420
+
+
+
+
+
 
 
 // RHSoftwareSPI _rspi;
 // RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
 
 tvp5151 tvp(TVP5151_PDN, TVP5151_RESET, TVP5151_ADDR, &Wire);
+LCD_CAM_Module cam_ctrl;
 
 #ifdef IS_CAM
 const int LED_PIN = 51;
@@ -89,6 +134,26 @@ void setup()
     };
     delay(50);
 
+    
+
+
+#ifdef C_ENABLE_CAM_CONTROL
+    pinMode(CAM1_ON_OFF, OUTPUT);
+    pinMode(LED_RED, OUTPUT);
+    // Serial1.begin(9600, CAM)
+    digitalWrite(CAM1_ON_OFF, LOW);
+    digitalWrite(LED_RED, LOW);
+
+    Serial.println("WARNING : Turning on camera in 1.5s!");
+    delay(1500);
+
+    digitalWrite(CAM1_ON_OFF, HIGH);
+    digitalWrite(LED_RED, HIGH);
+
+
+#endif
+
+
 #ifdef C_ENABLE_TVP_DECODE
 
     for (uint8_t i = 0; i < 8; i++)
@@ -118,22 +183,35 @@ void setup()
 
     #ifdef CAM2_Select
 
-    if (!tvp.source_select(CAM2))
-    {
-        Serial.println("CAM 2 failed to select.");
+        if (!tvp.source_select(CAM2))
+        {
+            Serial.println("CAM 2 failed to select.");
+            while (1)
+            {
+            };
+        }
+    #endif
+
+    if(!tvp.set_ycbcr_output_enable(true)){
+        Serial.println("TVP failed to enable output data.");
         while (1)
         {
         };
     }
-    #endif
 
+    if(!tvp.set_clock_output_enable(true)){
+         Serial.println("TVP failed to enable sclk.");
+        while (1)
+        {
+        };
+    }
 
-
-
-
-
-
-
+     if(!tvp.set_yCbCr_output_format(true)){ // enables 8-bit 4:2:2 YCbCr with discrete sync output 
+         Serial.println("TVP failed to enable output format 4:2:2");
+        while (1)
+        {
+        };
+    }
 
 
     // Test all read functions
@@ -258,6 +336,7 @@ void setup()
     }
 
     Serial.println("\n=== Write Functions Test Complete ===\n");
+ 
 
 
 
@@ -265,26 +344,36 @@ void setup()
 #endif
 
 
-#ifdef C_ENABLE_CAM_CONTROL
-    pinMode(CAM1_ON_OFF, OUTPUT);
-    pinMode(LED_RED, OUTPUT);
-    // Serial1.begin(9600, CAM)
-    digitalWrite(CAM1_ON_OFF, LOW);
-    digitalWrite(LED_RED, LOW);
 
-    Serial.println("WARNING : Turning on camera in 1.5s!");
-    delay(1500);
+// #ifdef C_ENABLE_LCD_CAM_CONTROLLER
 
-    digitalWrite(CAM1_ON_OFF, HIGH);
-    digitalWrite(LED_RED, HIGH);
+    // test read register value Address: 0x0018
+    // expected output 0111110001111111100000000011011 or 3E3FC01B in hex
 
-#endif
+    Serial.println(cam_ctrl.read_register(0x0018));
+
+    ESP_ERROR_CHECK(cam_ctrl.cam_controller_configure_gpio_matrix()); // configure AVID, YOUT, HSYNC, VSYNC, PCLK pins
+
+    esp_cam_ctlr_handle_t cam_handle = NULL; // initialize a handle which esp uses to store data in 
+
+    esp_cam_ctlr_trans_t my_trans;
+
+    // initialize LCD_CAM_Controller 
+
+    // cam_ctrl.initialize_cam_ctrl(); // Can test Kacper's initialize if esp dosen't work
+
+    ESP_ERROR_CHECK(esp_cam_ctlr_enable(&cam_handle)); // enable high peripheral
+
+    ESP_ERROR_CHECK(esp_cam_ctlr_start(&cam_handle)); // start cam controller
 
 
-#ifdef C_ENABLE_LCD_CAM_CONTROLLER
-    // test read register value
-    print(read_register())
-    
+    ESP_ERROR_CHECK(esp_cam_ctlr_receive(&cam_handle,&my_trans ,ESP_CAM_CTLR_MAX_DELAY)
+
+
+
+
+
+
 
     // Set up GPIO Matrix...
 
@@ -294,8 +383,7 @@ void setup()
 
 
 
-#endif
-
+// #endif
 
     Serial.println("init");
     init_tasks();

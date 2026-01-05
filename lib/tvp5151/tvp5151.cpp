@@ -54,7 +54,7 @@ uint16_t tvp5151::read_device_id()
 bool tvp5151::source_select(CAM_SELECT CAM)
 {
 
-    if (CAM2)
+    if (CAM==CAM2)
     { // CAM2 (AIP1B)
         return write_register(TVP_INPUT_SOURCE_SELECTION, 0x02);
     }
@@ -361,15 +361,33 @@ INTREQ/GPCL/VBLK (pin 27) function select
 // 3.21.13 Outputs and Data Rates Select Register
 
 // YCbCr output format 
-// 000 = 8-bit 4:2:2 YCbCr with discrete sync output
+// 000 = 8-bit 4:2:2 YCbCr with discrete sync output (true)
 // 001 = Reserved
 // 010 = Reserved
 // 011 = Reserved
 // 100 = Reserved
 // 101 = Reserved
 // 110 = Reserved
-// 111 = 8-bit ITU-R BT.656 interface with embedded sync output (default)
+// 111 = 8-bit ITU-R BT.656 interface with embedded sync output (default) (false)
+bool tvp5151::set_yCbCr_output_format(bool format){
 
+    if(format){
+        if(!rmw_reg(TVP_OUTPUT_DATA_SELECT, 0x07, 0x00)){
+            return false;
+        } // = 8-bit 4:2:2 YCbCr with discrete sync output (true)
+    }
+    else{
+        if(!rmw_reg(TVP_OUTPUT_DATA_SELECT, 0x07, 0x07)){
+            return false; // 8-bit ITU-R BT.656 interface with embedded sync output (default) (false)
+        }
+    }
+
+    return true;
+
+
+
+
+}
 
 bool tvp5151::set_gpcl_output(bool enable_gpcl_output)
 {
@@ -458,6 +476,14 @@ bool tvp5151::modify_register_bit(uint8_t reg, uint8_t bit_mask, bool state)
 
     return true;
 }
+
+bool tvp5151::rmw_reg(uint8_t reg, uint8_t clear_mask, uint8_t set_mask){
+    uint8_t current = REG_READ(reg);
+    current &=  ~clear_mask; 
+    current |= set_mask; 
+    REG_WRITE(reg, current);
+}
+
 
 /*
 True - bit is 1.

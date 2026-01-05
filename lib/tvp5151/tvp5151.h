@@ -81,6 +81,7 @@ private:
     // Utilites
     tvp_i2c_result_t read_register(uint8_t register_addr);
     bool write_register(uint8_t register_addr, uint8_t data);
+    bool rmw_reg(uint8_t reg, uint8_t clear_mask, uint8_t set_mask);
 
     void print_I2C_error(TVP_I2C_ERROR error);
     TVP_I2C_ERROR categorize_error(uint8_t error);
@@ -176,4 +177,13 @@ public:
     //------
 
 
+
+
+    //------- YCbCr Output Format Test
+
+
+    bool set_yCbCr_output_format(bool format);
+
+
+    //-------
 };

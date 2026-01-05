@@ -5,6 +5,9 @@
 #include "esp_rom_gpio.h" 
 #include "../../main/pins.h"
 
+#include "soc/pcr_reg.h"
+#include "soc/pcr_struct.h"
+
 class LCD_CAM_Module { 
 
     private:
