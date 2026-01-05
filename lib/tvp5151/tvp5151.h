@@ -15,7 +15,8 @@ enum TVP_I2C_ERROR
     NACK_ADDRESS = 2,
     NACK_DATA = 3,
     OTHER = 4,
-    TIMEOUT = 5
+    TIMEOUT = 5,
+    DEFAULT_VAL = 67
 };
 
 enum class VideoStandard : uint8_t

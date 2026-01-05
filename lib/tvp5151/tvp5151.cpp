@@ -78,7 +78,7 @@ uint8_t tvp5151::read_cb_gain()
     {
         return reg_val.data;
     }
-    return -1;
+    return 0xFF;
 }
 
 uint8_t tvp5151::read_cr_gain()
@@ -88,7 +88,7 @@ uint8_t tvp5151::read_cr_gain()
     {
         return reg_val.data;
     }
-    return -1;
+    return 0xFF;
 }
 
 /*
@@ -659,23 +659,25 @@ void tvp5151::print_I2C_error(TVP_I2C_ERROR error)
     switch (error)
     {
     case SUCCESS:
-        Serial.print("Success");
+        Serial.println("Success");
         break;
     case BUFFER_OVERFLOW:
-        Serial.print("Buffer Overflow");
+        Serial.println("Buffer Overflow");
         break;
     case NACK_ADDRESS:
-        Serial.print("No acknowledge on address");
+        Serial.println("No acknowledge on address");
         break;
     case NACK_DATA:
-        Serial.print("No acknowledge on data");
+        Serial.println("No acknowledge on data");
         break;
     case OTHER:
-        Serial.print("Other");
+        Serial.println("Other");
         break;
     case TIMEOUT:
-        Serial.print("Time_out");
+        Serial.println("Time_out");
         break;
+    case DEFAULT_VAL:
+        Serial.println("Weird tvp_i2c_error");
     }
 }
 
@@ -695,5 +697,7 @@ TVP_I2C_ERROR tvp5151::categorize_error(uint8_t error)
         return OTHER;
     case 5:
         return TIMEOUT;
+    default:
+        return DEFAULT_VAL;
     }
 }
