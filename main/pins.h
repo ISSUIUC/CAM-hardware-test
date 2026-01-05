@@ -30,6 +30,8 @@
     #define CAM2_RX 33
     #define CAM2_TX 32
 
+    
+
     #define BUZZER_PIN 24
 
     constexpr uint8_t YOUT[8] = {23, 22, 21, 20, 13, 12, 11, 10};

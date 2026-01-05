@@ -1,5 +1,7 @@
 #include <tvp5151.h>
 
+
+
 tvp5151::tvp5151(uint8_t pdn, uint8_t reset, uint8_t addr, TwoWire *i2c)
 {
     _i2c_addr = addr;
@@ -49,16 +51,15 @@ uint16_t tvp5151::read_device_id()
     return device_id;
 }
 
-// for the registers should I have a boolean for each bit such as black output if I want it on or should this just select camera in which it's decoding? I think the latter
 bool tvp5151::source_select(CAM_SELECT CAM)
 {
 
-    if (CAM)
-    { // CAM1 (AIP1B)
+    if (CAM2)
+    { // CAM2 (AIP1B)
         return write_register(TVP_INPUT_SOURCE_SELECTION, 0x02);
     }
     else
-    { // CAM0 (AIP1A)
+    { // CAM1 (AIP1A)
         return write_register(TVP_INPUT_SOURCE_SELECTION, 0x00);
     }
 }
@@ -195,6 +196,110 @@ bool tvp5151::read_vcr_mode()
     return read_register_bit(TVP_REG_STATUS_ONE, 0x01);
 }
 
+
+
+// 3.21.49 Status Register #2
+
+// 3.21.49 Status Register #2 || Bit 6 
+// Weak signal detection
+// 0 = No weak signal
+// 1 = Weak signal mode
+bool tvp5151::read_weak_signal(){
+    return read_register_bit(TVP_REG_STATUS_TWO, 0x40);
+}
+
+// 3.21.49 Status Register #2 || Bit 4 
+// Field sequence status
+// 0 = Even field (False)
+// 1 = Odd field (True)
+bool tvp5151::read_field_sequence_status(){
+    return read_register_bit(TVP_REG_STATUS_TWO, 0x10);
+}
+
+
+// 3.21.49 Status Register #2 || Bit 3
+// AGC and offset frozen status
+// 0 = AGC and offset are not frozen.
+// 1 = AGC and offset are frozen.
+bool tvp5151::read_AGC_frozen_status(){
+    return read_register_bit(TVP_REG_STATUS_TWO, 0x08);
+}
+
+
+
+// 3.21.50 Status Register #3
+
+// 3.21.50 Status Register #3 || BIT 4-8 
+// Analog gain: 4-bit front-end AGC analog gain setting
+// 0 ≤ analog_gain ≤ 15
+uint8_t tvp5151::read_analog_gain(){
+    tvp_i2c_result_t reg = read_register(TVP_REG_STATUS_THREE);
+    uint8_t analog_gain = reg.data &= 0xF0;
+    return analog_gain; 
+
+}
+// 3.21.50 Status Register #3 || BIT 0-3
+// Digital gain: 4 MSBs of 6-bit front-end AGC digital gain setting
+// 0 ≤ digital_gain ≤ 63
+uint8_t tvp5151::read_digital_gain(){
+    tvp_i2c_result_t reg = read_register(TVP_REG_STATUS_THREE);
+    uint8_t digital_gain = reg.data &= 0x0F;
+    return digital_gain; 
+}
+ 
+
+// 3.21.50 Status Register #3 
+// The product of the analog and digital gain is as follows: 
+// Gain Product = (1 + 3 × analog_gain / 15) × (1 + gain_step × digital_gain / 4096)
+// The gain_step setting as a function of the analog_gain setting is shown in Table 3-15.
+uint8_t tvp5151::read_gain_product(){
+    uint8_t digital_gain = read_digital_gain();
+    uint8_t analog_gain = read_analog_gain();
+    uint8_t gain_product = (1+(3*(analog_gain/15))) * (1 + ((GAIN_STEP[analog_gain] * digital_gain)/4096));
+    return gain_product; 
+    
+}
+
+
+// 3.21.51 Status Register #4
+
+
+// Subcarrier to horizontal (SCH) phase (I don't think we need it)
+
+
+// 3.21.52 Status Register #5
+// This register contains information about the detected video standard at which the device is currently
+// operating. When autoswitch code is running, this register must be tested to determine which video
+// standard has been detected.
+
+
+// 3.21.52 Status Register #5 || Bit 7
+bool tvp5151::read_autoswitch_mode(){   
+    return read_register_bit(TVP_REG_STATUS_FIVE, 0x80);
+}
+
+
+// 3.21.52 Status Register #5 || Bit 0-3
+VideoStandard tvp5151::read_video_standard(){
+    tvp_i2c_result_t value = read_register(TVP_REG_STATUS_FIVE);
+
+    uint8_t video_bit_val = value.data &= 0x0F;
+
+    switch(video_bit_val){
+        case 0b001: return VideoStandard::NTSC_M_J;
+        case 0b011: return VideoStandard::PAL_BDGHI_N;
+        case 0b101: return VideoStandard::PAL_M;
+        case 0b111: return VideoStandard::PAL_Nc;
+        case 0b1001: return VideoStandard::NTSC_443;
+        case 0b1011: return VideoStandard::SECAM;
+        default: return VideoStandard::RESERVED; 
+    }
+}
+
+
+
+
+
 //--------------------------------------------------------------------------------------------------------------
 
 bool tvp5151::reset_miscellaneous_controls_register()
@@ -312,6 +417,21 @@ VBLK/GPCL function select (affects INTREQ/GPCL/VBLK output only if bit 1 of I2C 
 0 = GPCL (default)
 1 = VBLK
 */
+
+
+// 3.21.13 Outputs and Data Rates Select Register
+
+// YCbCr output format 
+// 000 = 8-bit 4:2:2 YCbCr with discrete sync output
+// 001 = Reserved
+// 010 = Reserved
+// 011 = Reserved
+// 100 = Reserved
+// 101 = Reserved
+// 110 = Reserved
+// 111 = 8-bit ITU-R BT.656 interface with embedded sync output (default)
+
+
 bool tvp5151::set_gpcl_or_vblk_output(bool enable_gpcl_output)
 {
     // Select GPCL/VBLK function in the shared pin register
@@ -325,6 +445,23 @@ bool tvp5151::set_gpcl_or_vblk_output(bool enable_gpcl_output)
     // Set Bit 7: 0 for GPCL, 1 for VBLK
     return modify_register_bit(TVP_REG_MISC_CONTROLS, 0x80, !enable_gpcl_output);
 }
+
+
+
+// 3.21.44 Vertical Line Count MSB Register 
+// 3.21.45 Vertical Line Count LSB Register (Used for seeing how many lines per frame)
+uint16_t tvp5151::read_vertical_line_count(){
+    tvp_i2c_result_t read_reg_1 = read_register(TVP_VERTICAL_LINE_MSB);
+    uint8_t MSB_Bit = read_reg_1.data &= 0x03;
+    tvp_i2c_result_t read_reg_2 = read_register(TVP_VERTICAL_LINE_LSB);
+    uint8_t LSB_Bit = read_reg_2.data; 
+    uint16_t vertical_line_count = (MSB_Bit<<8) + LSB_Bit;
+    return vertical_line_count;
+
+}
+
+
+
 
 /*
 3.21.17 Active Video Cropping Start Pixel LSB Register | Bit 2 (Page 41)
