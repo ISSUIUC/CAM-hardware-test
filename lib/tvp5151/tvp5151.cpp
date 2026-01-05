@@ -467,10 +467,16 @@ bool tvp5151::set_gpcl_or_vblk_output(bool enable_gpcl_output)
 uint16_t tvp5151::read_vertical_line_count()
 {
     tvp_i2c_result_t read_reg_1 = read_register(TVP_VERTICAL_LINE_MSB);
+    if (read_reg_1.result != SUCCESS)
+        return 0;
     uint8_t MSB_Bit = read_reg_1.data &= 0x03;
+
     tvp_i2c_result_t read_reg_2 = read_register(TVP_VERTICAL_LINE_LSB);
+    if (read_reg_2.result != SUCCESS)
+        return 0;
     uint8_t LSB_Bit = read_reg_2.data;
-    uint16_t vertical_line_count = (MSB_Bit << 8) + LSB_Bit;
+
+    uint16_t vertical_line_count = ((uint16_t)MSB_Bit << 8) | LSB_Bit;
     return vertical_line_count;
 }
 
@@ -584,10 +590,10 @@ bool tvp5151::set_crop_vblk_vertical(int8_t start_offset, int8_t stop_offset)
 
 tvp_i2c_result_t tvp5151::read_register(uint8_t register_addr)
 {
-    _i2c->beginTransmission(_i2c_addr);
-    _i2c->write(register_addr);
     tvp_i2c_result_t reg_val;
 
+    _i2c->beginTransmission(_i2c_addr);
+    _i2c->write(register_addr);
     uint8_t error = _i2c->endTransmission(true);
     reg_val.result = categorize_error(error);
 
@@ -599,8 +605,14 @@ tvp_i2c_result_t tvp5151::read_register(uint8_t register_addr)
     }
 
     _i2c->requestFrom(_i2c_addr, 1);
-    uint8_t register_data = _i2c->read();
-    reg_val.data = register_data;
+    if (_i2c->available() < 1)
+    {
+        reg_val.result = TIMEOUT;
+        Serial.println("[ERROR] I2C read: no data available");
+        return reg_val;
+    }
+
+    reg_val.data = _i2c->read();
     return reg_val;
 }
 
