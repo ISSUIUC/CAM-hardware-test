@@ -92,11 +92,13 @@ private:
     void print_I2C_error(TVP_I2C_ERROR error);
     TVP_I2C_ERROR categorize_error(uint8_t error);
 
+    bool register_bit_tvp_i2c_result_to_bool(tvp_i2c_result_t ret, String method_name);
+
     // TODO: Untested
     //------
 
     bool modify_register_bit(uint8_t reg, uint8_t bit_mask, bool state);
-    bool read_register_bit(uint8_t reg, uint8_t bit_mask);
+    tvp_i2c_result_t read_register_bit(uint8_t reg, uint8_t bit_mask);
 
     //------
 
@@ -178,7 +180,7 @@ public:
 
     uint8_t read_analog_gain();
     uint8_t read_digital_gain();
-    uint8_t read_gain_product();
+    float read_gain_product();
 
     //------
 

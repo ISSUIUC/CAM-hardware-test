@@ -52,7 +52,7 @@ uint16_t tvp5151::read_device_id()
 bool tvp5151::source_select(CAM_SELECT CAM)
 {
 
-    if (CAM2)
+    if (CAM)
     { // CAM2 (AIP1B)
         return write_register(TVP_INPUT_SOURCE_SELECTION, 0x02);
     }
@@ -104,9 +104,14 @@ This is essentially an AND statement comparing the status of the vertical, hori,
 */
 bool tvp5151::read_lock_state_interrupt()
 {
-    bool ret = read_register_bit(TVP_REG_INTERRUPT_STATUS_A, 0x80);
+    bool ret = register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_INTERRUPT_STATUS_A, 0x80), "read_lock_state_interrupt");
+
     if (!write_register(TVP_REG_INTERRUPT_STATUS_A, 0x80))
+    {
+        Serial.println("[ERROR] <read_lock_state_interrupt()> Write interrupt status for acknowledgement failed");
         return false;
+    }
+
     return ret;
 }
 
@@ -119,7 +124,7 @@ Returns 1 if the chip is successfully tracking the vertical timing (frames)
 */
 bool tvp5151::read_vertical_sync_lock_status()
 {
-    return read_register_bit(TVP_REG_STATUS_ONE, 0x04);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_ONE, 0x04), "read_vertical_sync_lock_status");
 }
 
 /*
@@ -131,7 +136,7 @@ Returns 1 if the chip is successfully tracking the horizontal timing (lines)
 */
 bool tvp5151::read_horizontal_sync_lock_status()
 {
-    return read_register_bit(TVP_REG_STATUS_ONE, 0x02);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_ONE, 0x02), "read_horizontal_sync_lock_status");
 }
 
 /*
@@ -142,7 +147,7 @@ Color subcarrier lock status
 */
 bool tvp5151::read_color_subcarrier_lock_status()
 {
-    return read_register_bit(TVP_REG_STATUS_ONE, 0x08);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_ONE, 0x08), "read_color_subcarrier_lock_status");
 }
 
 /*
@@ -155,7 +160,7 @@ Reading the register automatically resets this bit to 0 (nice)
 */
 bool tvp5151::read_lost_lock_status()
 {
-    return read_register_bit(TVP_REG_STATUS_ONE, 0x10);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_ONE, 0x10), "read_lost_lock_status");
 }
 
 /*
@@ -166,7 +171,7 @@ Horizontal sync lock status
 */
 bool tvp5151::read_peak_white_detect_status()
 {
-    return read_register_bit(TVP_REG_STATUS_ONE, 0x80);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_ONE, 0x80), "read_peak_white_detect_status");
 }
 
 /*
@@ -180,7 +185,7 @@ standard input video format.
 */
 bool tvp5151::read_vcr_mode()
 {
-    return read_register_bit(TVP_REG_STATUS_ONE, 0x01);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_ONE, 0x01), "read_vcr_mode");
 }
 
 // 3.21.49 Status Register #2
@@ -191,7 +196,7 @@ bool tvp5151::read_vcr_mode()
 // 1 = Weak signal mode
 bool tvp5151::read_weak_signal()
 {
-    return read_register_bit(TVP_REG_STATUS_TWO, 0x40);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_TWO, 0x40), "read_weak_signal");
 }
 
 // 3.21.49 Status Register #2 || Bit 4
@@ -200,7 +205,7 @@ bool tvp5151::read_weak_signal()
 // 1 = Odd field (True)
 bool tvp5151::read_field_sequence_status()
 {
-    return read_register_bit(TVP_REG_STATUS_TWO, 0x10);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_TWO, 0x10), "read_field_sequence_status");
 }
 
 // 3.21.49 Status Register #2 || Bit 3
@@ -209,7 +214,7 @@ bool tvp5151::read_field_sequence_status()
 // 1 = AGC and offset are frozen.
 bool tvp5151::read_AGC_frozen_status()
 {
-    return read_register_bit(TVP_REG_STATUS_TWO, 0x08);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_TWO, 0x08), "read_AGC_frozen_status");
 }
 
 // 3.21.50 Status Register #3
@@ -220,6 +225,11 @@ bool tvp5151::read_AGC_frozen_status()
 uint8_t tvp5151::read_analog_gain()
 {
     tvp_i2c_result_t reg = read_register(TVP_REG_STATUS_THREE);
+    if (reg.result != SUCCESS)
+    {
+        Serial.println("[ERROR] <read_analog_gain> read_register");
+        return 0;
+    }
     uint8_t analog_gain = reg.data &= 0xF0;
     return analog_gain;
 }
@@ -229,6 +239,11 @@ uint8_t tvp5151::read_analog_gain()
 uint8_t tvp5151::read_digital_gain()
 {
     tvp_i2c_result_t reg = read_register(TVP_REG_STATUS_THREE);
+    if (reg.result != SUCCESS)
+    {
+        Serial.println("[ERROR] <read_digital_gain> read_register");
+        return 0;
+    }
     uint8_t digital_gain = reg.data &= 0x0F;
     return digital_gain;
 }
@@ -237,7 +252,7 @@ uint8_t tvp5151::read_digital_gain()
 // The product of the analog and digital gain is as follows:
 // Gain Product = (1 + 3 × analog_gain / 15) × (1 + gain_step × digital_gain / 4096)
 // The gain_step setting as a function of the analog_gain setting is shown in Table 3-15.
-uint8_t tvp5151::read_gain_product()
+float tvp5151::read_gain_product()
 {
     uint8_t digital_gain = read_digital_gain();
     uint8_t analog_gain = read_analog_gain();
@@ -245,8 +260,7 @@ uint8_t tvp5151::read_gain_product()
     float ag_factor = 1.0 + (3.0 * ((float)analog_gain / 15.0));
     float dg_factor = 1.0 + ((float)GAIN_STEP[analog_gain] * (float)digital_gain / 4096.0);
 
-    uint8_t gain_product = ag_factor * dg_factor;
-    return gain_product;
+    return ag_factor * dg_factor;
 }
 
 // 3.21.51 Status Register #4
@@ -261,13 +275,18 @@ uint8_t tvp5151::read_gain_product()
 // 3.21.52 Status Register #5 || Bit 7
 bool tvp5151::read_autoswitch_mode()
 {
-    return read_register_bit(TVP_REG_STATUS_FIVE, 0x80);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_FIVE, 0x80), "read_autoswitch_mode");
 }
 
 // 3.21.52 Status Register #5 || Bit 0-3
 VideoStandard tvp5151::read_video_standard()
 {
     tvp_i2c_result_t value = read_register(TVP_REG_STATUS_FIVE);
+    if (value.result != SUCCESS)
+    {
+        Serial.println("[ERROR] <read_video_standard> read_register");
+        return VideoStandard::RESERVED;
+    }
 
     uint8_t video_bit_val = value.data &= 0x0F;
 
@@ -618,23 +637,21 @@ bool tvp5151::modify_register_bit(uint8_t reg, uint8_t bit_mask, bool state)
     return true;
 }
 
-/*
-True - bit is 1.
-False - bit is 0.
-*/
-bool tvp5151::read_register_bit(uint8_t reg, uint8_t bit_mask)
+tvp_i2c_result_t tvp5151::read_register_bit(uint8_t reg, uint8_t bit_mask)
 {
     tvp_i2c_result_t res = read_register(reg);
+    res.data = (res.data & bit_mask) != 0;
+    return res;
+}
 
-    if (res.result != SUCCESS)
+bool tvp5151::register_bit_tvp_i2c_result_to_bool(tvp_i2c_result_t ret, String method_name)
+{
+    if (ret.result != SUCCESS)
     {
-        Serial.println("[ERROR] I2C Read Error");
-        print_I2C_error(categorize_error(res.result));
+        Serial.println("[ERROR] <" + method_name + "> | <read_register_bit> failed");
         return false;
     }
-
-    // AND
-    return (res.data & bit_mask) != 0;
+    return ret.data;
 }
 
 void tvp5151::print_I2C_error(TVP_I2C_ERROR error)
