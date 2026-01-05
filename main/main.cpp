@@ -324,6 +324,49 @@ void setup()
     }
     delay(100);
 
+    Serial.println("Testing set_gpcl_output(true)...");
+    if (tvp.set_gpcl_output(true))
+    {
+        Serial.println("✓ GPCL output configured successfully");
+    }
+    else
+    {
+        Serial.println("✗ Failed to configure GPCL output");
+    }
+    delay(100);
+
+    Serial.println("Testing set_crop_avid_horizontal(15,-15)...");
+    if (tvp.set_crop_avid_horizontal(15, -15))
+    {
+        Serial.println("✓ Hori crop set up successfully");
+    }
+    else
+    {
+        Serial.println("✗ HORI CROP FAILED ...  :( ");
+    }
+    delay(100);
+
+    Serial.println("Testing set_crop_vblk_vertical(15,-15)...");
+    if (tvp.set_crop_vblk_vertical(15, -15))
+    {
+        Serial.println("✓ vertical crop set up successfully!");
+    }
+    else
+    {
+        Serial.println("✗ verti crop set up failed .. wamp wamp");
+    }
+    delay(100);
+
+    Serial.println("\nResetting crop registers...");
+    if (tvp.reset_crop())
+    {
+        Serial.println("✓ Registers reset successfully");
+    }
+    else
+    {
+        Serial.println("✗ Failed to reset registers");
+    }
+
     // Reset miscellaneous controls register
     Serial.println("\nResetting miscellaneous controls register...");
     if (tvp.reset_miscellaneous_controls_register())

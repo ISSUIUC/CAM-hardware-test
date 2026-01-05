@@ -44,9 +44,18 @@ private:
     static constexpr uint8_t TVP_INPUT_SOURCE_SELECTION = 0x00;
 
     static constexpr uint8_t TVP_REG_MISC_CONTROLS = 0x03;
+    static constexpr uint8_t TVP_REG_MISC_OUTPUT_CONTROLS = 0x05;
+
     static constexpr uint8_t TVP_REG_CONFIG_SHARED_PINS = 0x0F;
 
     static constexpr uint8_t TVP_REG_INTERRUPT_STATUS_A = 0xC0;
+
+    static constexpr uint8_t TVP_REG_AVID_CROP_START_MSB = 0x11;
+    static constexpr uint8_t TVP_REG_AVID_CROP_START_LSB = 0x12;
+    static constexpr uint8_t TVP_REG_AVID_CROP_STOP_MSB = 0x13;
+    static constexpr uint8_t TVP_REG_AVID_CROP_STOP_LSB = 0x14;
+    static constexpr uint8_t TVP_REG_VBLK_CROP_START = 0x18;
+    static constexpr uint8_t TVP_REG_VBLK_CROP_STOP = 0x19;
 
     static constexpr uint8_t TVP_REF_CB_GAIN_FACTOR = 0x2C;
     static constexpr uint8_t TVP_REF_CR_GAIN_FACTOR = 0x2D;
@@ -120,11 +129,22 @@ public:
     // TODO: UNTESTED
     //------
 
-    bool set_gpcl_output(bool enable_gpcl_output);
     bool set_gpcl_logic_level(bool level);
-    bool reset_miscellaneous_controls_register();
     bool set_ycbcr_output_enable(bool enable_ycbcr_output);
     bool set_clock_output_enable(bool enable_clock);
+    bool reset_miscellaneous_controls_register();
+
+    //------
+
+    // TODO: UNTESTED
+    //------
+
+    bool set_crop_avid_horizontal(int16_t start, int16_t stop);
+    bool set_crop_vblk_vertical(int8_t start_offset, int8_t stop_offset);
+    bool set_avid_output_enable(bool enable);
+    bool set_gpcl_or_vblk_output(bool enable_gpcl_output);
+    bool set_avid_out_active_during_vblk(bool active);
+    bool reset_crop();
 
     //------
 
