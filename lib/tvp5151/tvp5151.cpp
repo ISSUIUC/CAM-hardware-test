@@ -70,17 +70,6 @@ bool tvp5151::setup_ex_1_ntsc_to_bt656()
 
 //----------------------------------------------------------------------------------------------------------------------------------
 
-// Outputs and Data Rates Select Register
-// Extended Range vs BT.601 Limited Range (We are using default (Extended code range) and
-// if video dosen't look right it's said that this is a common error with video so could be worth checking into more)
-// ESP32 / FPGA processing Reccomends extended range so this is what is set by default
-
-// 3.21.16 Active Video Cropping Start Pixel MSB Register
-// We are not doing any sort of AVID right? Because our CAM Signal alligns with video decoder standard 720 x 480 ?
-
-// 3.21.20 Genlock and RTC Register
-// Real Time Communcation I need to look into this more and if we need it as we are ultimately wanting to stream live video? Does it correlate at all?
-
 // 3.21.33 Cb Gain Factor Register
 uint8_t tvp5151::read_cb_gain()
 {
