@@ -17,6 +17,8 @@ USBCDC USBSerial;
 #include <lcd_cam.h> // kacper's code used for setting GPIO Matrix, can test initialize CAM Controller if esp_cam_ctlr doesn't work 
 #include <esp_cam_ctlr.h> // esp code for cam controller 
 #include "esp_cam_ctlr_types.h" // for defining transaction type
+#include "esp_cam_ctlr_dvp.h"
+
 
 
 #include "esp_h264_enc_single.h"
@@ -25,6 +27,8 @@ USBCDC USBSerial;
 #define CORE_1 1
 
 // #define C_ENABLE_BUZZER
+
+
 
 
 
@@ -44,7 +48,7 @@ USBCDC USBSerial;
 // #define C_ENABLE_TVP_DECODE
 
 
-// Video Test Pipeline #2 || TVP5151 Setup + CAM_Controller Initization + Output YUV422 
+// Video Test Pipeline #2 || TVP5151 Setup + CAM_Controller Initization + Output YUV422 || One FRAME 
 
     // TVP5151 Setup + Camera Init
 // #define C_ENABLE_CAM_CONTROL
@@ -60,15 +64,11 @@ USBCDC USBSerial;
 
 
 
-
-
-
-
-
-
 // Video Test Pipeline #3 
-    // TVP5151 Setup + CAM_Controller Initization + Format Conversion YUV422 > YUV420
+    // TVP5151 Setup + CAM_Controller Initization + Format Conversion YUV422 > YUV420 > USB-C 
 
+// #define C_ENABLE_LCD_CAM_CONTROLLER
+// #define VIDEO_CONVERSION_YUV
 
 
 
@@ -314,7 +314,7 @@ void setup()
 
     // Test GPCL output
     Serial.println("Testing set_gpcl_output(true)...");
-    if (tvp.set_gpcl_output(true))
+    if (tvp.set_gpcl_or_vblk_output(true))
     {
         Serial.println("✓ GPCL output configured successfully");
     }
@@ -325,7 +325,7 @@ void setup()
     delay(100);
 
     Serial.println("Testing set_gpcl_output(true)...");
-    if (tvp.set_gpcl_output(true))
+    if (tvp.set_gpcl_or_vblk_output(true))
     {
         Serial.println("✓ GPCL output configured successfully");
     }
@@ -388,45 +388,145 @@ void setup()
 
 
 
-// #ifdef C_ENABLE_LCD_CAM_CONTROLLER
+#ifdef C_ENABLE_LCD_CAM_CONTROLLER
 
     // test read register value Address: 0x0018
     // expected output 0111110001111111100000000011011 or 3E3FC01B in hex
 
     Serial.println(cam_ctrl.read_register(0x0018));
 
+
+
+    // Set up GPIO Matrix...
+
     ESP_ERROR_CHECK(cam_ctrl.cam_controller_configure_gpio_matrix()); // configure AVID, YOUT, HSYNC, VSYNC, PCLK pins
 
     esp_cam_ctlr_handle_t cam_handle = NULL; // initialize a handle which esp uses to store data in 
 
-    esp_cam_ctlr_trans_t my_trans;
 
     // initialize LCD_CAM_Controller 
 
     // cam_ctrl.initialize_cam_ctrl(); // Can test Kacper's initialize if esp dosen't work
 
-    ESP_ERROR_CHECK(esp_cam_ctlr_enable(&cam_handle)); // enable high peripheral
+    esp_cam_ctlr_dvp_pin_config pin_cfg {
+        .data_width = CAM_CTLR_DATA_WIDTH_8,
+        .data_io = {
+            GPIO_NUM_23,
+            GPIO_NUM_22,
+            GPIO_NUM_21,
+            GPIO_NUM_20,
+            GPIO_NUM_13,
+            GPIO_NUM_12,
+            GPIO_NUM_11,
+            GPIO_NUM_10,
+        },
+        .vsync_io = GPIO_NUM_41,
+        .de_io = GPIO_NUM_45, 
+        .pclk_io = GPIO_NUM_2, 
+        .xclk_io = GPIO_NUM_NC, 
+    };
 
-    ESP_ERROR_CHECK(esp_cam_ctlr_start(&cam_handle)); // start cam controller
+    esp_cam_ctlr_dvp_config_t dvp_config; 
+    dvp_config.ctlr_id = 0;
+    dvp_config.clk_src = CAM_CLK_SRC_DEFAULT;
+    dvp_config.h_res = 720;
+    dvp_config.v_res = 480;
+    dvp_config.input_data_color_type = CAM_CTLR_COLOR_YUV422;
+    dvp_config.cam_data_width = 8;
+
+    dvp_config.bit_swap_en = 0;             
+    dvp_config.byte_swap_en = 0;
+    dvp_config.bk_buffer_dis =1;            /*!< Disable backup buffer */
+    dvp_config.pin_dont_init = 1;           /*!< Don't initialize DVP pins if users have called "esp_cam_ctlr_dvp_init" before */
+    dvp_config.pic_format_jpeg = 0;          /*!< Input picture format is JPEG, if set this flag and "input_data_color_type" will be ignored */
+    dvp_config.external_xtal = 1;
+
+    dvp_config.dma_burst_size = 128;
+    dvp_config.xclk_freq = 1;
+    dvp_config.pin = &pin_cfg;
 
 
-    ESP_ERROR_CHECK(esp_cam_ctlr_receive(&cam_handle,&my_trans ,ESP_CAM_CTLR_MAX_DELAY)
+    // esp_cam_ctlr_dvp_config_t dvp_config = {
+    // .ctlr_id = 0,
+    // .clk_src = CAM_CLK_SRC_DEFAULT,
+    // .h_res = 720,
+    // .v_res = 480,
+    // .input_data_color_type = CAM_CTLR_COLOR_YUV422,
+    // .cam_data_width = 8,
+
+    // .bit_swap_en = 0,               /*!< Enable bit swap */
+    // .byte_swap_en = 0,              /*!< Enable byte swap
+    //                                                 *
+    //                                                 * GDMA Data Byte Order Table (input: B0,B1,B2,B3,B4,B5, addresses from low to high)
+    //                                                 *
+    //                                                 * | cam_data_width | bit_swap_en | byte_swap_en | Stage 1 Output Data Sequence   |
+    //                                                 * |----------------|-------------|--------------|------------------------------  |
+    //                                                 * | 8-bit          | 0           | 0            | {B0}{B1}{B2}{B3}{B4}{B5}       |
+    //                                                 * | 8-bit          | 0           | 1            | {B1,B0}{B3,B2}{B5,B4}          |
+    //                                                 * | 8-bit          | 1           | 0            | {B0'}{B1'}{B2'}{B3'}{B4'}{B5'} |
+    //                                                 * | 8-bit          | 1           | 1            | {B1',B0'}{B3',B2'}{B5',B4'}    |
+    //                                                 *
+    //                                                 * | 16-bit         | 0           | 0            | {B1,B0}{B3,B2}{B5,B4}          |
+    //                                                 * | 16-bit         | 0           | 1            | {B0,B1}{B2,B3}{B4,B5}          |
+    //                                                 * | 16-bit         | 1           | 0            | {B1',B0'}{B3',B2'}{B5',B4'}    |
+    //                                                 * | 16-bit         | 1           | 1            | {B0',B1'}{B2',B3'}{B4',B5'}    |
+    //                                                 *
+    //                                                 * | 24-bit         | 0           | 0            | {B2,B1,B0}{B5,B4,B3}           |
+    //                                                 * | 24-bit         | 0           | 1            | {B0,B1,B2}{B3,B4,B5}           |
+    //                                                 * | 24-bit         | 1           | 0            | {B2',B1',B0'}{B5',B4',B3'}     |
+    //                                                 * | 24-bit         | 1           | 1            | {B0',B1',B2'}{B3',B4',B5'}     |
+    //                                                 *
+    //                                                 * Where B0' = bit-reversed B0，Bn'[7:0] = Bn[0:7]
+    //                                                 * Each {} contains big-endian parallel data, {} are in serial relationship, output order is left to right
+    //                                                 */
+    // .bk_buffer_dis =1,            /*!< Disable backup buffer */
+    // .pin_dont_init = 1,             /*!< Don't initialize DVP pins if users have called "esp_cam_ctlr_dvp_init" before */
+    // .pic_format_jpeg = 0,           /*!< Input picture format is JPEG, if set this flag and "input_data_color_type" will be ignored */
+    // .external_xtal = 1,
+
+    // .dma_burst_size = 128,
+    // .xclk_freq = 1,
+    // .pin = &pin_cfg,
+    // };
+
+
+    ESP_ERROR_CHECK(esp_cam_new_dvp_ctlr(&dvp_config, &cam_handle));
+
+
+    #ifdef VIDEO_CONVERSION_YUV
+
+    const cam_ctlr_format_conv_config_t conv_cfg = {
+    .src_format = CAM_CTLR_COLOR_YUV422,      // Source format: YUV422
+    .dst_format = CAM_CTLR_COLOR_YUV420,      // Destination format: RGB565
+    .conv_std = COLOR_CONV_STD_RGB_YUV_BT601,
+    .data_width = 8,
+    .input_range = COLOR_RANGE_LIMIT,
+    .output_range = COLOR_RANGE_LIMIT,
+    };
+    ESP_ERROR_CHECK(esp_cam_ctlr_format_conversion(cam_handle, &conv_cfg));
+
+    #endif
+
+    ESP_ERROR_CHECK(esp_cam_ctlr_enable(cam_handle)); // enable high peripheral
+
+    ESP_ERROR_CHECK(esp_cam_ctlr_start(cam_handle)); // start cam controller
+
+    size_t frame_bytes = 720* 480 * 2;
+
+
+    esp_cam_ctlr_trans_t my_trans;
+
+    my_trans.buffer = malloc(frame_bytes);
+    my_trans.buflen = frame_bytes; 
+
+    ESP_ERROR_CHECK(esp_cam_ctlr_receive(cam_handle,&my_trans ,ESP_CAM_CTLR_MAX_DELAY));
 
 
 
 
 
 
-
-    // Set up GPIO Matrix...
-
-
-
-
-
-
-
-// #endif
+#endif
 
     Serial.println("init");
     init_tasks();
