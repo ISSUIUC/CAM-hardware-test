@@ -51,6 +51,7 @@ USBCDC USBSerial;
 // Video Test Pipeline #2 || TVP5151 Setup + CAM_Controller Initization + Output YUV422 || One FRAME 
 
     // TVP5151 Setup + Camera Init
+
 // #define C_ENABLE_CAM_CONTROL
 // #define CAM1_Select
 // #define C_ENABLE_TVP_DECODE
@@ -78,7 +79,7 @@ USBCDC USBSerial;
 // #define C_ENABLE_LCD_CAM_CONTROLLER
 
     // Convert Video Format from YUV422 to YUV420 
-    
+
 // #define VIDEO_CONVERSION_YUV
 
 
@@ -439,7 +440,7 @@ void setup()
     // test read register value Address: 0x0018
     // expected output 0111110001111111100000000011011 or 3E3FC01B in hex
 
-    Serial.println(cam_ctrl.read_register(0x0018));
+    Serial.println(cam_ctrl.read_register_test(0x0018));
 
 
 
@@ -543,7 +544,7 @@ void setup()
 
     const cam_ctlr_format_conv_config_t conv_cfg = {
     .src_format = CAM_CTLR_COLOR_YUV422,      // Source format: YUV422
-    .dst_format = CAM_CTLR_COLOR_YUV420,      // Destination format: RGB565
+    .dst_format = CAM_CTLR_COLOR_YUV420,      // Destination format: YUV420
     .conv_std = COLOR_CONV_STD_RGB_YUV_BT601,
     .data_width = 8,
     .input_range = COLOR_RANGE_LIMIT,
@@ -569,10 +570,6 @@ void setup()
 
     on_frame_ready(&my_trans); // send frame over usb.
      
-
-    
-    
- 
 
 
 

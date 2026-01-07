@@ -1,4 +1,6 @@
-// have fun!
+
+#pragma once 
+
 
 #ifdef IS_CAM
     #define SPI_SCK  9

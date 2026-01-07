@@ -9,7 +9,7 @@ LCD_CAM_Module::LCD_CAM_Module(){}
 
 
 
-uint32_t read_register(uint32_t reg){ // Just a test function 
+uint32_t LCD_CAM_Module::read_register_test(uint32_t reg){ // Just a test function 
     return REG_READ(reg);
 } 
   

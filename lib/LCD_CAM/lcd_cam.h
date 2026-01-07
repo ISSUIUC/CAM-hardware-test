@@ -15,6 +15,8 @@ class LCD_CAM_Module {
             CAM_DATA_IN_PAD_IN2_IDX, CAM_DATA_IN_PAD_IN3_IDX, CAM_DATA_IN_PAD_IN4_IDX,
             CAM_DATA_IN_PAD_IN5_IDX, CAM_DATA_IN_PAD_IN6_IDX, CAM_DATA_IN_PAD_IN7_IDX};
 
+
+
         // static constexpr uint8_t CAM_HSYNC_SIGNAL = CAM_H_SYNC_PAD_IN_IDX;
         // static constexpr uint8_t CAM_VSYNC_SIGNAL = CAM_V_SYNC_PAD_IN_IDX;
         // static constexpr uint8_t CAM_PCLK_SIGNAL = CAM_PCLK_PAD_IN_IDX; // SCLK as this advances the bus (2 Bits = 1 Pixel) Models SCLK models bits not pixels
@@ -27,10 +29,11 @@ class LCD_CAM_Module {
         LCD_CAM_Module();
 
         // Test
-        uint32_t read_register(uint32_t reg);
+        uint32_t read_register_test(uint32_t reg);
 
         // Tools
         void rmw_reg(uint32_t reg, uint32_t clear_mask, uint32_t set_mask);
+
 
 
         // Setting LCD_CAM
