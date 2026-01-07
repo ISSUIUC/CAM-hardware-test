@@ -231,7 +231,7 @@ void setup()
         };
     }
 
-    if (!tvp.set_yCbCr_output_format(true))
+    if (!tvp.set_output_format(VideoOutputFormat::DISCRETE_SYNC_YCBCR_422))
     { // enables 8-bit 4:2:2 YCbCr with discrete sync output
         Serial.println("TVP failed to enable output format 4:2:2");
         while (1)
