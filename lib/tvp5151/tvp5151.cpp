@@ -645,10 +645,12 @@ bool tvp5151::modify_register_bit(uint8_t reg, uint8_t bit_mask, bool state)
 }
 
 bool tvp5151::rmw_reg(uint8_t reg, uint8_t clear_mask, uint8_t set_mask){
-    uint8_t current = REG_READ(reg);
-    current &=  ~clear_mask; 
+    tvp_i2c_result_t result = read_register(reg);
+    uint8_t current = result.data;
+    current &=  ~clear_mask;
     current |= set_mask; 
-    REG_WRITE(reg, current);
+    write_register(reg, current);
+    return true;
 }
 
 
