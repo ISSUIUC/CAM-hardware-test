@@ -67,9 +67,19 @@ USBCDC USBSerial;
 // Video Test Pipeline #3 
     // TVP5151 Setup + CAM_Controller Initization + Format Conversion YUV422 > YUV420 > USB-C 
 
-// #define C_ENABLE_LCD_CAM_CONTROLLER
-// #define VIDEO_CONVERSION_YUV
+    // TVP5151 Setup + Camera Init
 
+// #define C_ENABLE_CAM_CONTROL
+// #define CAM1_Select
+// #define C_ENABLE_TVP_DECODE
+
+    // Set-up GPIO Matrix of ESP32 P4 || Initialize CAM Controller using esp driver 
+
+// #define C_ENABLE_LCD_CAM_CONTROLLER
+
+    // Convert Video Format from YUV422 to YUV420 
+    
+// #define VIDEO_CONVERSION_YUV
 
 
 
@@ -107,6 +117,42 @@ void task_ex(void *arg)
 {
     xTaskCreatePinnedToCore(task_ex, "example", 1024, nullptr, 0, nullptr, CORE_0);
 }
+
+
+static bool sent_once = false; 
+
+void on_frame_ready(const esp_cam_ctlr_trans_t *trans){
+    if(sent_once){ // so that the function only sends one frame
+        return;
+    }
+    sent_once = true; 
+
+    uint32_t off = 0; 
+    uint32_t magic = 0x314D4143; // "CAM1" 
+    uint32_t len = (uint32_t)trans->received_size; // length
+    uint8_t *buf = (uint8_t*)trans->buffer;  
+
+
+    Serial.write((uint8_t*)&magic, 4);
+    Serial.write((uint8_t*)&len, 4);
+
+
+    while(off<len){ // making sure we don't overload usb write and instead send in chunks 
+        uint32_t chunk = len - off;
+
+        if(chunk>512) chunk = 512;
+
+        size_t wrote = Serial.write(buf+off, chunk);
+
+        off += chunk;
+
+        if(wrote == 0){ // if nothing was written wait for USB to finish. 
+            vTaskDelay(pdMS_TO_TICKS(1));
+        }
+    }
+}
+
+
 
 void setup()
 {
@@ -521,8 +567,12 @@ void setup()
 
     ESP_ERROR_CHECK(esp_cam_ctlr_receive(cam_handle,&my_trans ,ESP_CAM_CTLR_MAX_DELAY));
 
+    on_frame_ready(&my_trans); // send frame over usb.
+     
 
-
+    
+    
+ 
 
 
 

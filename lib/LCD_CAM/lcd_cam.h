@@ -5,8 +5,6 @@
 #include "esp_rom_gpio.h" 
 #include "../../main/pins.h"
 
-#include "soc/pcr_reg.h"
-#include "soc/pcr_struct.h"
 
 class LCD_CAM_Module { 
 
@@ -17,10 +15,10 @@ class LCD_CAM_Module {
             CAM_DATA_IN_PAD_IN2_IDX, CAM_DATA_IN_PAD_IN3_IDX, CAM_DATA_IN_PAD_IN4_IDX,
             CAM_DATA_IN_PAD_IN5_IDX, CAM_DATA_IN_PAD_IN6_IDX, CAM_DATA_IN_PAD_IN7_IDX};
 
-        static constexpr uint8_t CAM_HSYNC_SIGNAL = CAM_H_SYNC_PAD_IN_IDX;
-        static constexpr uint8_t CAM_VSYNC_SIGNAL = CAM_V_SYNC_PAD_IN_IDX;
-        static constexpr uint8_t CAM_PCLK_SIGNAL = CAM_PCLK_PAD_IN_IDX; // SCLK as this advances the bus (2 Bits = 1 Pixel) Models SCLK models bits not pixels
-        static constexpr uint8_t CAM_DE_SIGNAL = CAM_H_ENABLE_PAD_IN_IDX; // set high data always enabled no input from tvp
+        // static constexpr uint8_t CAM_HSYNC_SIGNAL = CAM_H_SYNC_PAD_IN_IDX;
+        // static constexpr uint8_t CAM_VSYNC_SIGNAL = CAM_V_SYNC_PAD_IN_IDX;
+        // static constexpr uint8_t CAM_PCLK_SIGNAL = CAM_PCLK_PAD_IN_IDX; // SCLK as this advances the bus (2 Bits = 1 Pixel) Models SCLK models bits not pixels
+        // static constexpr uint8_t CAM_DE_SIGNAL = CAM_H_ENABLE_PAD_IN_IDX; // set high data always enabled no input from tvp
 
 
         
