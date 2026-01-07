@@ -3,19 +3,16 @@
 #include <stdbool.h>
 
 
-LCD_CAM_Module::LCD_CAM_Module()
-{
 
 
-}
+LCD_CAM_Module::LCD_CAM_Module(){}
 
 
-uint32_t read_register(uint32_t reg){ // Just a test function 
+
+uint32_t LCD_CAM_Module::read_register_test(uint32_t reg){ // Just a test function 
     return REG_READ(reg);
 } 
-
-
-
+  
 
 
 // Read, Modify, Write 
@@ -173,9 +170,11 @@ esp_err_t LCD_CAM_Module::cam_controller_configure_gpio_matrix(){
         return err;
     }
 
-    // Toggle DE_Signal Input  (ALWAYS HIGH)
-    esp_rom_gpio_connect_in_signal(GPIO_MATRIX_CONST_ONE_INPUT, CAM_DE_SIGNAL, false);
-    
+    // Toggle DE_Signal Input  (Connected to active video signal)
+     err =cam_config_gpio(TVP5151_AVID, CAM_H_ENABLE_PAD_IN_IDX);
+    if(err!=ESP_OK){
+        return err;
+    }    
 
     return ESP_OK;
 

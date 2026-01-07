@@ -52,7 +52,7 @@ uint16_t tvp5151::read_device_id()
 bool tvp5151::source_select(CAM_SELECT CAM)
 {
 
-    if (CAM)
+    if (CAM == CAM2)
     { // CAM2 (AIP1B)
         return write_register(TVP_INPUT_SOURCE_SELECTION, 0x02);
     }
