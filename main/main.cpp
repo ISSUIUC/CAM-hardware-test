@@ -52,9 +52,9 @@ USBCDC USBSerial;
 
     // TVP5151 Setup + Camera Init
 
-#define C_ENABLE_CAM_CONTROL
-#define CAM1_Select
-#define C_ENABLE_TVP_DECODE
+// #define C_ENABLE_CAM_CONTROL
+// #define CAM1_Select
+// #define C_ENABLE_TVP_DECODE
 
 
     // Set-up GPIO Matrix of ESP32 P4 || Initialize CAM Controller using esp driver 
@@ -143,13 +143,13 @@ void on_frame_ready(const esp_cam_ctlr_trans_t *trans){
 
     Serial.write((uint8_t*)&magic, 4);
 
-    Serial.print("PRINTED Magic");
+    Serial.println("PRINTED Magic");
 
-    Serial.print("Printing Length");
+    Serial.println("Printing Length");
 
 
-    Serial.write((uint8_t*)&len, 4);
-    Serial.print("PRINTED Length");
+    Serial.print(len);
+    Serial.println("PRINTED Length");
 
 
 
@@ -159,14 +159,14 @@ void on_frame_ready(const esp_cam_ctlr_trans_t *trans){
 
         if(chunk>512) chunk = 512;
 
-        Serial.print("Writing Chunk");
+        Serial.println("Writing Chunk");
         size_t wrote = Serial.write(buf+off, chunk);
-        Serial.print("PRINTED Chunk");
+        Serial.println("PRINTED Chunk");
 
         off += chunk;
 
         if(wrote == 0){ // if nothing was written wait for USB to finish. 
-            Serial.print("Nothing was written, USB FULL");
+            Serial.println("Nothing was written, USB FULL");
             vTaskDelay(pdMS_TO_TICKS(1));
         }
     }
@@ -500,7 +500,7 @@ void setup()
             GPIO_NUM_11,
             GPIO_NUM_10,
         },
-        .vsync_io = GPIO_NUM_41,
+        .vsync_io = GPIO_NUM_46,
         .de_io = GPIO_NUM_45, 
         .pclk_io = GPIO_NUM_2, 
         .xclk_io = GPIO_NUM_NC, 
@@ -579,6 +579,7 @@ void setup()
         Serial.println(err);
     }
 
+   
 
 
 
@@ -596,37 +597,36 @@ void setup()
 
     #endif
 
-    // Serial.println((uint32_t)cam_handle);
+    Serial.println((uint32_t)cam_handle);
 
 
-    // Serial.println("Enable CAM Ctlr");
+    Serial.println("Enable CAM Ctlr");
 
 
-    // esp_err_t err2; 
-    // err2 = esp_cam_ctlr_enable(cam_handle); // enable high peripheral // no work
+    esp_err_t err2; 
+    err2 = esp_cam_ctlr_enable(cam_handle); // enable high peripheral // no work
 
-    // if(err2!=ESP_OK){
-    //     Serial.print("ERROR 2");
-    //     Serial.println(err2);
-    // }
-
-    // Serial.println(((esp_cam_ctlr_t*)cam_handle)->enable);
+    if(err2!=ESP_OK){
+        Serial.print("ERROR 2");
+        Serial.println(err2);
+    }   
 
 
 
-    // Serial.println("Start CAM Controller");
 
-    // esp_err_t err3; 
-    // err3 = esp_cam_ctlr_start(cam_handle); // start cam // no work // might get through enable not do anything and go into start and fail.
+    Serial.println("Start CAM Controller");
+
+    esp_err_t err3; 
+    err3 = esp_cam_ctlr_start(cam_handle); // start cam // no work // might get through enable not do anything and go into start and fail.
     
-    // if(err3!=ESP_OK){
-    //     Serial.print("ERROR 3");
-    //     Serial.println(err3);
-    // }
+    if(err3!=ESP_OK){
+        Serial.print("ERROR 3");
+        Serial.println(err3);
+    }
 
 
 
-    // Serial.print("CAM CONTROLLER START!");
+    Serial.print("CAM CONTROLLER START!");
 
 
 
