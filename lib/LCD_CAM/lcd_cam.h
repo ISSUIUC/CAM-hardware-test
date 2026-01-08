@@ -30,6 +30,7 @@ class LCD_CAM_Module {
 
         // Test
         uint32_t read_register_test(uint32_t reg);
+        
 
         // Tools
         void rmw_reg(uint32_t reg, uint32_t clear_mask, uint32_t set_mask);

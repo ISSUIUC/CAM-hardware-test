@@ -26,6 +26,9 @@
 #include "esp_private/esp_clk_tree_common.h"
 #include "../../dvp_share_ctrl.h"
 
+
+
+
 #ifdef CONFIG_CAM_CTLR_DVP_CAM_ISR_CACHE_SAFE
 #define DVP_CAM_CTLR_ALLOC_CAPS             (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)
 #else
@@ -816,16 +819,18 @@ esp_err_t esp_cam_ctlr_dvp_format_conversion(esp_cam_ctlr_handle_t cam_handle,
  */
 esp_err_t esp_cam_new_dvp_ctlr(const esp_cam_ctlr_dvp_config_t *config, esp_cam_ctlr_handle_t *ret_handle)
 {
+
     esp_err_t ret;
     size_t fb_size_in_bytes;
     size_t alignment_size;
 
+    
+    
     ESP_RETURN_ON_FALSE(config && ret_handle, ESP_ERR_INVALID_ARG, TAG, "invalid argument: config or ret_handle is null");
     ESP_RETURN_ON_FALSE(config->ctlr_id < CAP_DVP_PERIPH_NUM, ESP_ERR_INVALID_ARG, TAG, "invalid argument: ctlr_id >= %d", CAP_DVP_PERIPH_NUM);
     ESP_RETURN_ON_FALSE(config->pin_dont_init || config->pin, ESP_ERR_INVALID_ARG, TAG, "invalid argument: pin_dont_init is unset and pin is null");
     ESP_RETURN_ON_FALSE(config->external_xtal || config->pin_dont_init || config->pin->xclk_io != GPIO_NUM_NC, ESP_ERR_INVALID_ARG, TAG, "invalid argument: xclk_io is not set");
     ESP_RETURN_ON_FALSE(config->external_xtal || config->xclk_freq, ESP_ERR_INVALID_ARG, TAG, "invalid argument: xclk_freq is not set");
-
     ESP_RETURN_ON_ERROR(esp_cache_get_alignment(DVP_CAM_BK_BUFFER_ALLOC_CAPS, &alignment_size), TAG, "failed to get cache alignment");
     ESP_RETURN_ON_ERROR(esp_cam_ctlr_dvp_cam_get_frame_size(config, &fb_size_in_bytes), TAG, "invalid argument: input frame pixel format is not supported");
     ESP_RETURN_ON_ERROR(dvp_shared_ctrl_claim_io_signals(), TAG, "failed to claim io signals");
@@ -835,6 +840,8 @@ esp_err_t esp_cam_new_dvp_ctlr(const esp_cam_ctlr_dvp_config_t *config, esp_cam_
 
     ESP_GOTO_ON_ERROR(s_dvp_claim_ctlr(config->ctlr_id, ctlr), fail1, TAG, "no available DVP controller");
 
+    
+
     ESP_LOGD(TAG, "alignment: 0x%x\n", alignment_size);
     fb_size_in_bytes = ALIGN_UP_BY(fb_size_in_bytes, alignment_size);
     if (!config->bk_buffer_dis) {
@@ -842,15 +849,32 @@ esp_err_t esp_cam_new_dvp_ctlr(const esp_cam_ctlr_dvp_config_t *config, esp_cam_
         ESP_GOTO_ON_FALSE(ctlr->backup_buffer, ESP_ERR_NO_MEM, fail2, TAG, "no mem for DVP backup buffer");
     }
 
-    // ESP_GOTO_ON_ERROR(esp_cam_ctlr_dvp_dma_init(&ctlr->dma, config->dma_burst_size, fb_size_in_bytes),
-    //                   fail3, TAG, "failed to initialize DVP DMA");
+    ESP_GOTO_ON_ERROR(esp_cam_ctlr_dvp_dma_init(&ctlr->dma, config->dma_burst_size, fb_size_in_bytes),
+                      fail3, TAG, "failed to initialize DVP DMA"); // was commented out
 
     gdma_rx_event_callbacks_t cbs = {
         .on_recv_eof = esp_cam_ctlr_recv_frame_done_isr
     };
 
+    // Didn't error yet
+
+    // if(ctlr!=NULL){
+
+    // }
+
+    // if(ctlr->dma.dma_chan != NULL){
+
+
+
+    // }
+
+
+    
     ESP_GOTO_ON_ERROR(gdma_register_rx_event_callbacks(ctlr->dma.dma_chan, &cbs, ctlr),
                       fail4, TAG, "failed to register DMA event callbacks");
+
+    // Errord 
+                  
 
     /* Initialize DVP controller */
 
@@ -863,15 +887,23 @@ esp_err_t esp_cam_new_dvp_ctlr(const esp_cam_ctlr_dvp_config_t *config, esp_cam_
 
     ESP_RETURN_ON_FALSE(cam_hal_config.cam_data_width == 8 || cam_hal_config.cam_data_width == 16 || cam_hal_config.cam_data_width == 24, ESP_ERR_INVALID_ARG, TAG, "invalid argument: cam_data_width is not 8 or 16 or 24");
 
+
+
 #if !CONFIG_ESP32P4_SELECTS_REV_LESS_V3
     ESP_RETURN_ON_FALSE(cam_hal_config.cam_data_width != 8 || cam_hal_config.byte_swap_en == 0, ESP_ERR_INVALID_ARG, TAG, "invalid argument: byte swap is not supported when cam_data_width is 8");
 #endif
+
+    // Already errored. 
+
+
 
     if (!config->pin_dont_init) {
         // Initialzie DVP clock and GPIO internally
         ESP_GOTO_ON_ERROR(esp_cam_ctlr_dvp_init(config->ctlr_id, config->clk_src, config->pin),
                           fail5, TAG, "failed to initialize clock and GPIO");
     }
+
+
 
     if (!config->external_xtal) {
         // Generate DVP xtal clock internally
