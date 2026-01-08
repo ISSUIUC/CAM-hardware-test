@@ -663,7 +663,7 @@ bool tvp5151::rmw_reg(uint8_t reg, uint8_t clear_mask, uint8_t set_mask)
 True - bit is 1.
 False - bit is 0.
 */
-bool tvp5151::read_register_bit(uint8_t reg, uint8_t bit_mask)
+tvp_i2c_result_t tvp5151::read_register_bit(uint8_t reg, uint8_t bit_mask)
 {
     tvp_i2c_result_t res = read_register(reg);
     res.data = (res.data & bit_mask) != 0;
