@@ -22,6 +22,8 @@ USBCDC USBSerial;
 
 #include "esp_h264_enc_single.h"
 
+#include "esp_heap_caps.h"
+
 #define CORE_0 0
 #define CORE_1 1
 
@@ -599,7 +601,13 @@ void setup()
 
     esp_cam_ctlr_trans_t my_trans;
 
-    my_trans.buffer = malloc(frame_bytes);
+    // Allocate DMA/cache-aligned internal RAM for frame receive buffer, alignment is 64 bytes
+    my_trans.buffer = (uint8_t *)heap_caps_aligned_alloc(64, frame_bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+    if (!my_trans.buffer)
+    {
+        Serial.println("ERROR: failed to allocate aligned frame buffer");
+    }
+
     my_trans.buflen = frame_bytes;
 
     Serial.println("Receive Frame");
