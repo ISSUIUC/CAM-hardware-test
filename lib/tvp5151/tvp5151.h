@@ -1,8 +1,6 @@
 #include <Wire.h>
 #include <Arduino.h>
 
-
-
 // Type defs
 enum CAM_SELECT
 {
@@ -17,19 +15,26 @@ enum TVP_I2C_ERROR
     NACK_ADDRESS = 2,
     NACK_DATA = 3,
     OTHER = 4,
-    TIMEOUT = 5
+    TIMEOUT = 5,
+    DEFAULT_VAL = 67
 };
 
-enum class VideoStandard : uint8_t {
-    RESERVED     = 0b000, 
-    NTSC_M_J     = 0b001, // (M, J) NTSC ITU-R BT.601
-    PAL_BDGHI_N  = 0b011, // PAL B,D,G,H,I,N
-    PAL_M        = 0b101,
-    PAL_Nc       = 0b111,
-    NTSC_443     = 0b1001, 
-    SECAM        = 0b1011
+enum class VideoStandard : uint8_t
+{
+    RESERVED = 0b000,
+    NTSC_M_J = 0b001,    // (M, J) NTSC ITU-R BT.601
+    PAL_BDGHI_N = 0b011, // PAL B,D,G,H,I,N
+    PAL_M = 0b101,
+    PAL_Nc = 0b111,
+    NTSC_443 = 0b1001,
+    SECAM = 0b1011
 };
 
+enum VideoOutputFormat
+{
+    DISCRETE_SYNC_YCBCR_422 = 0x00, // Uses HSYNC/VSYNC pins
+    EMBEDDED_SYNC_BT656 = 0x07      // Uses SAV/EAV codes (No sync pins needed)
+};
 
 typedef struct
 {
@@ -68,8 +73,7 @@ private:
 
     static constexpr uint8_t TVP_OUTPUT_DATA_SELECT = 0X0D;
 
-    
-    // Status Registers 
+    // Status Registers
 
     static constexpr uint8_t TVP_REG_STATUS_ONE = 0x88;
     static constexpr uint8_t TVP_REG_STATUS_TWO = 0x89;
@@ -77,28 +81,26 @@ private:
     static constexpr uint8_t TVP_REG_STATUS_FOUR = 0x8B;
     static constexpr uint8_t TVP_REG_STATUS_FIVE = 0x8C;
 
-
-
-    // Gain_Step_Setting 
+    // Gain_Step_Setting
     static constexpr uint8_t GAIN_STEP[16] = {
-    61, 55, 48, 44, 38, 33, 29, 26,
-    24, 22, 20, 19, 18, 17, 16, 15
-    };
-
-
+        61, 55, 48, 44, 38, 33, 29, 26,
+        24, 22, 20, 19, 18, 17, 16, 15};
 
     // Utilites
     tvp_i2c_result_t read_register(uint8_t register_addr);
     bool write_register(uint8_t register_addr, uint8_t data);
+    bool rmw_reg(uint8_t reg, uint8_t clear_mask, uint8_t set_mask);
 
     void print_I2C_error(TVP_I2C_ERROR error);
     TVP_I2C_ERROR categorize_error(uint8_t error);
+
+    bool register_bit_tvp_i2c_result_to_bool(tvp_i2c_result_t ret, String method_name);
 
     // TODO: Untested
     //------
 
     bool modify_register_bit(uint8_t reg, uint8_t bit_mask, bool state);
-    bool read_register_bit(uint8_t reg, uint8_t bit_mask);
+    tvp_i2c_result_t read_register_bit(uint8_t reg, uint8_t bit_mask);
 
     //------
 
@@ -132,6 +134,7 @@ public:
     bool set_ycbcr_output_enable(bool enable_ycbcr_output);
     bool set_clock_output_enable(bool enable_clock);
     bool reset_miscellaneous_controls_register();
+    bool set_output_format(VideoOutputFormat format);
 
     //------
 
@@ -162,7 +165,7 @@ public:
     bool read_lost_lock_status();
     bool read_color_subcarrier_lock_status();
     uint16_t read_vertical_line_count();
-    
+
     //------
 
     // TODO Status Register 2: UNTESTED
@@ -172,8 +175,6 @@ public:
     bool read_field_sequence_status();
     bool read_AGC_frozen_status();
 
-
-
     //------
 
     // TODO Status Register 3: UNTESTED
@@ -181,19 +182,15 @@ public:
 
     uint8_t read_analog_gain();
     uint8_t read_digital_gain();
-    uint8_t read_gain_product();
-
+    float read_gain_product();
 
     //------
-
 
     // TODO Status Register 5: UNTESTED
     //------
-    
+
     bool read_autoswitch_mode();
     VideoStandard read_video_standard();
 
     //------
-
-
 };

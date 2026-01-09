@@ -1,7 +1,5 @@
 #include <tvp5151.h>
 
-
-
 tvp5151::tvp5151(uint8_t pdn, uint8_t reset, uint8_t addr, TwoWire *i2c)
 {
     _i2c_addr = addr;
@@ -54,7 +52,7 @@ uint16_t tvp5151::read_device_id()
 bool tvp5151::source_select(CAM_SELECT CAM)
 {
 
-    if (CAM2)
+    if (CAM == CAM2)
     { // CAM2 (AIP1B)
         return write_register(TVP_INPUT_SOURCE_SELECTION, 0x02);
     }
@@ -72,17 +70,6 @@ bool tvp5151::setup_ex_1_ntsc_to_bt656()
 
 //----------------------------------------------------------------------------------------------------------------------------------
 
-// Outputs and Data Rates Select Register
-// Extended Range vs BT.601 Limited Range (We are using default (Extended code range) and
-// if video dosen't look right it's said that this is a common error with video so could be worth checking into more)
-// ESP32 / FPGA processing Reccomends extended range so this is what is set by default
-
-// 3.21.16 Active Video Cropping Start Pixel MSB Register
-// We are not doing any sort of AVID right? Because our CAM Signal alligns with video decoder standard 720 x 480 ?
-
-// 3.21.20 Genlock and RTC Register
-// Real Time Communcation I need to look into this more and if we need it as we are ultimately wanting to stream live video? Does it correlate at all?
-
 // 3.21.33 Cb Gain Factor Register
 uint8_t tvp5151::read_cb_gain()
 {
@@ -91,7 +78,7 @@ uint8_t tvp5151::read_cb_gain()
     {
         return reg_val.data;
     }
-    return -1;
+    return 0xFF;
 }
 
 uint8_t tvp5151::read_cr_gain()
@@ -101,7 +88,7 @@ uint8_t tvp5151::read_cr_gain()
     {
         return reg_val.data;
     }
-    return -1;
+    return 0xFF;
 }
 
 /*
@@ -117,9 +104,14 @@ This is essentially an AND statement comparing the status of the vertical, hori,
 */
 bool tvp5151::read_lock_state_interrupt()
 {
-    bool ret = read_register_bit(TVP_REG_INTERRUPT_STATUS_A, 0x80);
+    bool ret = register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_INTERRUPT_STATUS_A, 0x80), "read_lock_state_interrupt");
+
     if (!write_register(TVP_REG_INTERRUPT_STATUS_A, 0x80))
+    {
+        Serial.println("[ERROR] <read_lock_state_interrupt()> Write interrupt status for acknowledgement failed");
         return false;
+    }
+
     return ret;
 }
 
@@ -132,7 +124,7 @@ Returns 1 if the chip is successfully tracking the vertical timing (frames)
 */
 bool tvp5151::read_vertical_sync_lock_status()
 {
-    return read_register_bit(TVP_REG_STATUS_ONE, 0x04);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_ONE, 0x04), "read_vertical_sync_lock_status");
 }
 
 /*
@@ -144,7 +136,7 @@ Returns 1 if the chip is successfully tracking the horizontal timing (lines)
 */
 bool tvp5151::read_horizontal_sync_lock_status()
 {
-    return read_register_bit(TVP_REG_STATUS_ONE, 0x02);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_ONE, 0x02), "read_horizontal_sync_lock_status");
 }
 
 /*
@@ -155,7 +147,7 @@ Color subcarrier lock status
 */
 bool tvp5151::read_color_subcarrier_lock_status()
 {
-    return read_register_bit(TVP_REG_STATUS_ONE, 0x08);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_ONE, 0x08), "read_color_subcarrier_lock_status");
 }
 
 /*
@@ -168,7 +160,7 @@ Reading the register automatically resets this bit to 0 (nice)
 */
 bool tvp5151::read_lost_lock_status()
 {
-    return read_register_bit(TVP_REG_STATUS_ONE, 0x10);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_ONE, 0x10), "read_lost_lock_status");
 }
 
 /*
@@ -179,7 +171,7 @@ Horizontal sync lock status
 */
 bool tvp5151::read_peak_white_detect_status()
 {
-    return read_register_bit(TVP_REG_STATUS_ONE, 0x80);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_ONE, 0x80), "read_peak_white_detect_status");
 }
 
 /*
@@ -193,112 +185,129 @@ standard input video format.
 */
 bool tvp5151::read_vcr_mode()
 {
-    return read_register_bit(TVP_REG_STATUS_ONE, 0x01);
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_ONE, 0x01), "read_vcr_mode");
 }
-
-
 
 // 3.21.49 Status Register #2
 
-// 3.21.49 Status Register #2 || Bit 6 
+// 3.21.49 Status Register #2 || Bit 6
 // Weak signal detection
 // 0 = No weak signal
 // 1 = Weak signal mode
-bool tvp5151::read_weak_signal(){
-    return read_register_bit(TVP_REG_STATUS_TWO, 0x40);
+bool tvp5151::read_weak_signal()
+{
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_TWO, 0x40), "read_weak_signal");
 }
 
-// 3.21.49 Status Register #2 || Bit 4 
+// 3.21.49 Status Register #2 || Bit 4
 // Field sequence status
 // 0 = Even field (False)
 // 1 = Odd field (True)
-bool tvp5151::read_field_sequence_status(){
-    return read_register_bit(TVP_REG_STATUS_TWO, 0x10);
+bool tvp5151::read_field_sequence_status()
+{
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_TWO, 0x10), "read_field_sequence_status");
 }
-
 
 // 3.21.49 Status Register #2 || Bit 3
 // AGC and offset frozen status
 // 0 = AGC and offset are not frozen.
 // 1 = AGC and offset are frozen.
-bool tvp5151::read_AGC_frozen_status(){
-    return read_register_bit(TVP_REG_STATUS_TWO, 0x08);
+bool tvp5151::read_AGC_frozen_status()
+{
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_TWO, 0x08), "read_AGC_frozen_status");
 }
-
-
 
 // 3.21.50 Status Register #3
 
-// 3.21.50 Status Register #3 || BIT 4-8 
+// 3.21.50 Status Register #3 || BIT 4-8
 // Analog gain: 4-bit front-end AGC analog gain setting
 // 0 ≤ analog_gain ≤ 15
-uint8_t tvp5151::read_analog_gain(){
+uint8_t tvp5151::read_analog_gain()
+{
     tvp_i2c_result_t reg = read_register(TVP_REG_STATUS_THREE);
+    if (reg.result != SUCCESS)
+    {
+        Serial.println("[ERROR] <read_analog_gain> read_register");
+        return 0;
+    }
     uint8_t analog_gain = reg.data &= 0xF0;
-    return analog_gain; 
-
+    return analog_gain;
 }
 // 3.21.50 Status Register #3 || BIT 0-3
 // Digital gain: 4 MSBs of 6-bit front-end AGC digital gain setting
 // 0 ≤ digital_gain ≤ 63
-uint8_t tvp5151::read_digital_gain(){
+uint8_t tvp5151::read_digital_gain()
+{
     tvp_i2c_result_t reg = read_register(TVP_REG_STATUS_THREE);
+    if (reg.result != SUCCESS)
+    {
+        Serial.println("[ERROR] <read_digital_gain> read_register");
+        return 0;
+    }
     uint8_t digital_gain = reg.data &= 0x0F;
-    return digital_gain; 
+    return digital_gain;
 }
- 
 
-// 3.21.50 Status Register #3 
-// The product of the analog and digital gain is as follows: 
+// 3.21.50 Status Register #3
+// The product of the analog and digital gain is as follows:
 // Gain Product = (1 + 3 × analog_gain / 15) × (1 + gain_step × digital_gain / 4096)
 // The gain_step setting as a function of the analog_gain setting is shown in Table 3-15.
-uint8_t tvp5151::read_gain_product(){
+float tvp5151::read_gain_product()
+{
     uint8_t digital_gain = read_digital_gain();
     uint8_t analog_gain = read_analog_gain();
-    uint8_t gain_product = (1+(3*(analog_gain/15))) * (1 + ((GAIN_STEP[analog_gain] * digital_gain)/4096));
-    return gain_product; 
-    
-}
 
+    float ag_factor = 1.0 + (3.0 * ((float)analog_gain / 15.0));
+    float dg_factor = 1.0 + ((float)GAIN_STEP[analog_gain] * (float)digital_gain / 4096.0);
+
+    return ag_factor * dg_factor;
+}
 
 // 3.21.51 Status Register #4
 
-
 // Subcarrier to horizontal (SCH) phase (I don't think we need it)
-
 
 // 3.21.52 Status Register #5
 // This register contains information about the detected video standard at which the device is currently
 // operating. When autoswitch code is running, this register must be tested to determine which video
 // standard has been detected.
 
-
 // 3.21.52 Status Register #5 || Bit 7
-bool tvp5151::read_autoswitch_mode(){   
-    return read_register_bit(TVP_REG_STATUS_FIVE, 0x80);
+bool tvp5151::read_autoswitch_mode()
+{
+    return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_FIVE, 0x80), "read_autoswitch_mode");
 }
 
-
 // 3.21.52 Status Register #5 || Bit 0-3
-VideoStandard tvp5151::read_video_standard(){
+VideoStandard tvp5151::read_video_standard()
+{
     tvp_i2c_result_t value = read_register(TVP_REG_STATUS_FIVE);
+    if (value.result != SUCCESS)
+    {
+        Serial.println("[ERROR] <read_video_standard> read_register");
+        return VideoStandard::RESERVED;
+    }
 
     uint8_t video_bit_val = value.data &= 0x0F;
 
-    switch(video_bit_val){
-        case 0b001: return VideoStandard::NTSC_M_J;
-        case 0b011: return VideoStandard::PAL_BDGHI_N;
-        case 0b101: return VideoStandard::PAL_M;
-        case 0b111: return VideoStandard::PAL_Nc;
-        case 0b1001: return VideoStandard::NTSC_443;
-        case 0b1011: return VideoStandard::SECAM;
-        default: return VideoStandard::RESERVED; 
+    switch (video_bit_val)
+    {
+    case 0b001:
+        return VideoStandard::NTSC_M_J;
+    case 0b011:
+        return VideoStandard::PAL_BDGHI_N;
+    case 0b101:
+        return VideoStandard::PAL_M;
+    case 0b111:
+        return VideoStandard::PAL_Nc;
+    case 0b1001:
+        return VideoStandard::NTSC_443;
+    case 0b1011:
+        return VideoStandard::SECAM;
+    default:
+        return VideoStandard::RESERVED;
     }
 }
-
-
-
-
 
 //--------------------------------------------------------------------------------------------------------------
 
@@ -399,6 +408,28 @@ bool tvp5151::set_avid_output_enable(bool enable)
     return modify_register_bit(TVP_REG_MISC_CONTROLS, 0x04, enable);
 }
 
+/* 3.21.13 Outputs and Data Rates Select Register
+Bit 3 controls the format.
+
+// YCbCr output format
+// 000 = 8-bit 4:2:2 YCbCr with discrete sync output
+// 001 = Reserved
+// 010 = Reserved
+// 011 = Reserved
+// 100 = Reserved
+// 101 = Reserved
+// 110 = Reserved
+// 111 = 8-bit ITU-R BT.656 interface with embedded sync output (default)
+
+0 = Discrete Syncs (HSYNC/VSYNC active)
+7 = BT.656 (Embedded Syncs)
+*/
+bool tvp5151::set_output_format(VideoOutputFormat format)
+{
+
+    return write_register(TVP_OUTPUT_DATA_SELECT, (uint8_t)format);
+}
+
 /*
 3.21.15 Configuration Shared Pins Register | Bit 1 (Page 40)
 INTREQ/GPCL/VBLK (pin 27) function select
@@ -417,21 +448,6 @@ VBLK/GPCL function select (affects INTREQ/GPCL/VBLK output only if bit 1 of I2C 
 0 = GPCL (default)
 1 = VBLK
 */
-
-
-// 3.21.13 Outputs and Data Rates Select Register
-
-// YCbCr output format 
-// 000 = 8-bit 4:2:2 YCbCr with discrete sync output
-// 001 = Reserved
-// 010 = Reserved
-// 011 = Reserved
-// 100 = Reserved
-// 101 = Reserved
-// 110 = Reserved
-// 111 = 8-bit ITU-R BT.656 interface with embedded sync output (default)
-
-
 bool tvp5151::set_gpcl_or_vblk_output(bool enable_gpcl_output)
 {
     // Select GPCL/VBLK function in the shared pin register
@@ -446,22 +462,23 @@ bool tvp5151::set_gpcl_or_vblk_output(bool enable_gpcl_output)
     return modify_register_bit(TVP_REG_MISC_CONTROLS, 0x80, !enable_gpcl_output);
 }
 
-
-
-// 3.21.44 Vertical Line Count MSB Register 
+// 3.21.44 Vertical Line Count MSB Register
 // 3.21.45 Vertical Line Count LSB Register (Used for seeing how many lines per frame)
-uint16_t tvp5151::read_vertical_line_count(){
+uint16_t tvp5151::read_vertical_line_count()
+{
     tvp_i2c_result_t read_reg_1 = read_register(TVP_VERTICAL_LINE_MSB);
+    if (read_reg_1.result != SUCCESS)
+        return 0;
     uint8_t MSB_Bit = read_reg_1.data &= 0x03;
+
     tvp_i2c_result_t read_reg_2 = read_register(TVP_VERTICAL_LINE_LSB);
-    uint8_t LSB_Bit = read_reg_2.data; 
-    uint16_t vertical_line_count = (MSB_Bit<<8) + LSB_Bit;
+    if (read_reg_2.result != SUCCESS)
+        return 0;
+    uint8_t LSB_Bit = read_reg_2.data;
+
+    uint16_t vertical_line_count = ((uint16_t)MSB_Bit << 8) | LSB_Bit;
     return vertical_line_count;
-
 }
-
-
-
 
 /*
 3.21.17 Active Video Cropping Start Pixel LSB Register | Bit 2 (Page 41)
@@ -573,10 +590,10 @@ bool tvp5151::set_crop_vblk_vertical(int8_t start_offset, int8_t stop_offset)
 
 tvp_i2c_result_t tvp5151::read_register(uint8_t register_addr)
 {
-    _i2c->beginTransmission(_i2c_addr);
-    _i2c->write(register_addr);
     tvp_i2c_result_t reg_val;
 
+    _i2c->beginTransmission(_i2c_addr);
+    _i2c->write(register_addr);
     uint8_t error = _i2c->endTransmission(true);
     reg_val.result = categorize_error(error);
 
@@ -588,8 +605,14 @@ tvp_i2c_result_t tvp5151::read_register(uint8_t register_addr)
     }
 
     _i2c->requestFrom(_i2c_addr, 1);
-    uint8_t register_data = _i2c->read();
-    reg_val.data = register_data;
+    if (_i2c->available() < 1)
+    {
+        reg_val.result = TIMEOUT;
+        Serial.println("[ERROR] I2C read: no data available");
+        return reg_val;
+    }
+
+    reg_val.data = _i2c->read();
     return reg_val;
 }
 
@@ -601,7 +624,7 @@ bool tvp5151::write_register(uint8_t register_addr, uint8_t data)
     uint8_t error = _i2c->endTransmission(true);
     if (error)
     {
-        Serial.println("[ERROR] I2C read failed on write_register");
+        Serial.println("[ERROR] I2C write failed on write_register");
         print_I2C_error(categorize_error(error));
         return false;
     }
@@ -626,23 +649,35 @@ bool tvp5151::modify_register_bit(uint8_t reg, uint8_t bit_mask, bool state)
     return true;
 }
 
+bool tvp5151::rmw_reg(uint8_t reg, uint8_t clear_mask, uint8_t set_mask)
+{
+    tvp_i2c_result_t result = read_register(reg);
+    uint8_t current = result.data;
+    current &= ~clear_mask;
+    current |= set_mask;
+    write_register(reg, current);
+    return true;
+}
+
 /*
 True - bit is 1.
 False - bit is 0.
 */
-bool tvp5151::read_register_bit(uint8_t reg, uint8_t bit_mask)
+tvp_i2c_result_t tvp5151::read_register_bit(uint8_t reg, uint8_t bit_mask)
 {
     tvp_i2c_result_t res = read_register(reg);
+    res.data = (res.data & bit_mask) != 0;
+    return res;
+}
 
-    if (res.result != SUCCESS)
+bool tvp5151::register_bit_tvp_i2c_result_to_bool(tvp_i2c_result_t ret, String method_name)
+{
+    if (ret.result != SUCCESS)
     {
-        Serial.println("[ERROR] I2C Read Error");
-        print_I2C_error(categorize_error(res.result));
+        Serial.println("[ERROR] <" + method_name + "> | <read_register_bit> failed");
         return false;
     }
-
-    // AND
-    return (res.data & bit_mask) != 0;
+    return ret.data;
 }
 
 void tvp5151::print_I2C_error(TVP_I2C_ERROR error)
@@ -650,23 +685,25 @@ void tvp5151::print_I2C_error(TVP_I2C_ERROR error)
     switch (error)
     {
     case SUCCESS:
-        Serial.print("Success");
+        Serial.println("Success");
         break;
     case BUFFER_OVERFLOW:
-        Serial.print("Buffer Overflow");
+        Serial.println("Buffer Overflow");
         break;
     case NACK_ADDRESS:
-        Serial.print("No acknowledge on address");
+        Serial.println("No acknowledge on address");
         break;
     case NACK_DATA:
-        Serial.print("No acknowledge on data");
+        Serial.println("No acknowledge on data");
         break;
     case OTHER:
-        Serial.print("Other");
+        Serial.println("Other");
         break;
     case TIMEOUT:
-        Serial.print("Time_out");
+        Serial.println("Time_out");
         break;
+    case DEFAULT_VAL:
+        Serial.println("Weird tvp_i2c_error");
     }
 }
 
@@ -686,5 +723,7 @@ TVP_I2C_ERROR tvp5151::categorize_error(uint8_t error)
         return OTHER;
     case 5:
         return TIMEOUT;
+    default:
+        return DEFAULT_VAL;
     }
 }

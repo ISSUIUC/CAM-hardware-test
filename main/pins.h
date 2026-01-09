@@ -1,4 +1,6 @@
-// have fun!
+
+#pragma once 
+
 
 #ifdef IS_CAM
     #define SPI_SCK  9
@@ -17,6 +19,7 @@
     #define TVP5151_VSYNC 46
     #define TVP5151_HSYNC 41
     #define TVP5151_SCLK 2
+    #define TVP5151_AVID 45
 
     #define LED_BLUE 54
     #define LED_GREEN 53
@@ -45,4 +48,7 @@
     #define SI4463_INT 6
     #define SI4463_SDN 5
     #define SI4463_CS 7
+
+    #define I2C_SDA 0
+    #define I2C_SCL 0
 #endif
