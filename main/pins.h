@@ -48,4 +48,7 @@
     #define SI4463_INT 6
     #define SI4463_SDN 5
     #define SI4463_CS 7
+
+    #define I2C_SDA 0
+    #define I2C_SCL 0
 #endif
