@@ -5,7 +5,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_h264_alloc.h"
-#include "../../components/esp_h264/test_apps/main/h264_io.h"
+#include "h264_io.h"
 
 esp_h264_enc_cfg_t H264_ENC::set_config_H264_enc_single(esp_h264_raw_format_t format, uint8_t fps, uint16_t height, uint16_t width, uint32_t bitrate, uint8_t qp_min, uint8_t qp_max, uint8_t gop)
 {
