@@ -626,7 +626,7 @@ void setup()
     Serial.println("Running H264 encode->decode test");
 
     H264_ENC enc;
-    esp_h264_enc_cfg_t enc_cfg = enc.set_config_H264_enc_single(ESP_H264_RAW_FMT_YUYV, 30, 480, 720, 1000000, 10, 40, 30);
+    esp_h264_enc_cfg_t enc_cfg = enc.set_config_H264_enc_single(ESP_H264_RAW_FMT_O_UYY_E_VYY, 24, 480, 720, 82944, 26, 30, 30);
     esp_h264_err_t ret = enc.init_H264_enc_single(enc_cfg, HW);
     if (ret != ESP_H264_ERR_OK)
     {
@@ -663,7 +663,7 @@ void setup()
 
             Serial.println("Decoder time! Oh boi.");
             H264_DEC dec;
-            esp_h264_enc_cfg_t dec_cfg = dec.set_config_H264_dec_single(ESP_H264_RAW_FMT_I420, 30, 480, 720, 1000000, 10, 40, 30);
+            esp_h264_enc_cfg_t dec_cfg = dec.set_config_H264_dec_single(ESP_H264_RAW_FMT_I420, 24, 480, 720, 82944, 26, 30, 30);
             if (dec.init_H264_dec_single(dec_cfg) != ESP_H264_ERR_OK)
             {
                 Serial.println("DEC init failed");
