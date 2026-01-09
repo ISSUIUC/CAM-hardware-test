@@ -21,6 +21,7 @@ USBCDC USBSerial;
 #include "esp_cam_ctlr_dvp.h"
 
 #include "esp_h264_enc_single.h"
+#include "venc.h"
 
 #include "esp_heap_caps.h"
 
@@ -602,7 +603,7 @@ void setup()
     esp_cam_ctlr_trans_t my_trans;
 
     // Allocate DMA/cache-aligned internal RAM for frame receive buffer, alignment is 64 bytes
-    my_trans.buffer = (uint8_t *)heap_caps_aligned_alloc(64, frame_bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+    my_trans.buffer = heap_caps_aligned_alloc(64, frame_bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
     if (!my_trans.buffer)
     {
         Serial.println("ERROR: failed to allocate aligned frame buffer");
@@ -621,6 +622,95 @@ void setup()
     }
 
     Serial.println("Received Frame");
+
+    Serial.println("Running H264 encode->decode test");
+
+    uint32_t cam_h264_dts = 0;
+    uint32_t cam_h264_pts = 0;
+    H264_ENC enc;
+    esp_h264_enc_cfg_t enc_cfg = enc.set_config_H264_enc_single(ESP_H264_RAW_FMT_YUYV, 30, 480, 720, 1000000, 10, 40, 30);
+    if (enc.init_H264_enc_single(enc_cfg, HW) != ESP_H264_ERR_OK)
+    {
+        Serial.println("ENC hardware init failed...trying software");
+    }
+    else if (enc.init_H264_enc_single(enc_cfg, SW) != ESP_H264_ERR_OK)
+    {
+        Serial.println("ENC software init failed...rip");
+    }
+    else
+    {
+
+        esp_h264_enc_in_frame_t *in_frame = enc.get_inframe();
+        esp_h264_pkt_t packet;
+        packet.buffer = (uint8_t *)my_trans.buffer;
+        packet.len = my_trans.buflen;
+        in_frame->raw_data = packet;
+        in_frame->pts = cam_h264_pts; // TODO: idk how to set pts... (might wanna look at esp_h264_enc_dual.cpp&.h)
+        esp_h264_err_t ret = enc.run_H264_enc_single();
+        if (ret != ESP_H264_ERR_OK)
+        {
+            Serial.println("ENC process failed");
+        }
+        else
+        {
+            esp_h264_enc_out_frame_t *out_frame = enc.get_outframe();
+            esp_h264_pkt_t outputted_packet = out_frame->raw_data;
+            uint32_t enc_pkt_len = out_frame->length;
+
+            cam_h264_dts = out_frame->dts;
+            cam_h264_pts = cam_h264_dts; // TODO:  look into   //"If H.264 encode data has only I-frame and P-frame, the DTS is equal to PTS."
+
+            Serial.print("Encoded bytes: ");
+            Serial.println((uint32_t)enc_pkt_len);
+
+            Serial.println("Decoder time! Oh boi.");
+            H264_DEC dec;
+            esp_h264_enc_cfg_t dec_cfg = dec.set_config_H264_dec_single(ESP_H264_RAW_FMT_I420, 30, 480, 720, 1000000, 10, 40, 30);
+            if (dec.init_H264_dec_single(dec_cfg) != ESP_H264_ERR_OK)
+            {
+                Serial.println("DEC init failed");
+            }
+            else
+            {
+                esp_h264_dec_in_frame_t *in_frame = dec.get_inframe();
+                in_frame->raw_data = outputted_packet;
+
+                in_frame->dts = cam_h264_dts; // TODO: look into please, do i need to assign this for the input?
+                in_frame->pts = cam_h264_pts; // TODO: look into please, do i need to assign this for the input?
+
+                //  esp_h264_dec_in_frame_t in_frame = {.raw_data.buffer = buffer, .raw_data.len = len};
+                Serial.println("Decoding while loop....");
+                while (outputted_packet.len)
+                {
+                    esp_h264_err_t ret = dec.run_H264_dec_single();
+                    if (ret != ESP_H264_ERR_OK)
+                    {
+                        Serial.print("Error code: ");
+                        //  ESP_H264_ERR_OK             = 0,   /*<! Succeeded */
+                        // ESP_H264_ERR_FAIL = -1,            /*<! Failed */
+                        // ESP_H264_ERR_ARG = -2,         /*<! Invalid arguments */
+                        // ESP_H264_ERR_MEM = -3,         /*<! Insufficient memory */
+                        // ESP_H264_ERR_UNSUPPORTED = -5, /*<! Un-supported */
+                        // ESP_H264_ERR_TIMEOUT = -6,     /*<! Timeout */
+                        // ESP_H264_ERR_OVERFLOW = -7,    /*<! Buffer overflow */
+                        Serial.println(ret);
+                        break;
+                    }
+                    in_frame->raw_data.buffer += in_frame->consume;
+                    in_frame->raw_data.len -= in_frame->consume; // TODO: consume is not defined what should I define it as?
+                }
+
+                esp_h264_dec_out_frame_t *out_frame = dec.get_outframe();
+                uint32_t out_yuv_len = out_frame->out_size;
+
+                Serial.print("Decoded bytes: ");
+                Serial.println((uint32_t)out_yuv_len);
+
+                dec.close_H264_dec_single();
+            }
+            enc.close_H264_enc_single();
+        }
+    }
 
     Serial.println("Printing FRAME over serial");
 
