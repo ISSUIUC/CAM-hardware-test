@@ -141,6 +141,8 @@ public:
     // TODO: UNTESTED
     //------
 
+    bool set_hsync_vsync_avid_fid_outputs_enable(bool enable);
+
     bool set_crop_avid_horizontal(int16_t start, int16_t stop);
     bool set_crop_vblk_vertical(int8_t start_offset, int8_t stop_offset);
     bool set_avid_output_enable(bool enable);

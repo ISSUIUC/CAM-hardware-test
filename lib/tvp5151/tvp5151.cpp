@@ -350,6 +350,7 @@ bool tvp5151::set_gpcl_logic_level(bool level)
 }
 
 //--------------------------Cropping STUFF------------------------------------------------------------------------------------
+
 /*
 Read section 3.13 graph.
 
@@ -405,6 +406,12 @@ bool tvp5151::set_avid_output_enable(bool enable)
     if (!set_clock_output_enable(true))
         return false;
 
+    return modify_register_bit(TVP_REG_MISC_CONTROLS, 0x04, enable);
+}
+
+// Similar function here without the AVID stuff..
+bool tvp5151::set_hsync_vsync_avid_fid_outputs_enable(bool enable)
+{
     return modify_register_bit(TVP_REG_MISC_CONTROLS, 0x04, enable);
 }
 
