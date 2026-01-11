@@ -118,6 +118,7 @@ void task_ex(void *arg)
 
 void task_h264_encode_decode(void *arg)
 {
+    // 15000 a good guess?
     if (xSemaphoreTake(Sframe_rdy, pdMS_TO_TICKS(15000)))
     {
 
@@ -135,8 +136,6 @@ void task_h264_encode_decode(void *arg)
             ret = enc.init_H264_enc_single(enc_cfg, SW);
             if (ret != ESP_H264_ERR_OK)
                 Serial.println("software failed too...");
-
-            goto cleanup;
         }
         else
         {
@@ -195,13 +194,6 @@ void task_h264_encode_decode(void *arg)
                         if (ret != ESP_H264_ERR_OK)
                         {
                             Serial.print("Error code: ");
-                            // ESP_H264_ERR_OK             = 0,   /*<! Succeeded */
-                            // ESP_H264_ERR_FAIL = -1,            /*<! Failed */
-                            // ESP_H264_ERR_ARG = -2,         /*<! Invalid arguments */
-                            // ESP_H264_ERR_MEM = -3,         /*<! Insufficient memory */
-                            // ESP_H264_ERR_UNSUPPORTED = -5, /*<! Un-supported */
-                            // ESP_H264_ERR_TIMEOUT = -6,     /*<! Timeout */
-                            // ESP_H264_ERR_OVERFLOW = -7,    /*<! Buffer overflow */
                             Serial.println(ret);
                             break;
                         }
@@ -221,7 +213,6 @@ void task_h264_encode_decode(void *arg)
             }
         }
 
-    cleanup:
         vTaskDelete(NULL); // Task completes after processing one frame
     }
     else
