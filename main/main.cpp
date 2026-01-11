@@ -58,12 +58,6 @@ USBCDC USBSerial;
 // Video Test Pipeline #3
 // TVP5151 Setup + CAM_Controller Initization + Format Conversion YUV422 > YUV420 > USB-C
 
-// TVP5151 Setup + Camera Init
-
-// #define C_ENABLE_CAM_CONTROL
-// #define CAM1_Select
-// #define C_ENABLE_TVP_DECODE
-
 // Set-up GPIO Matrix of ESP32 P4 || Initialize CAM Controller using esp driver
 
 // Convert Video Format from YUV422 to YUV420
@@ -592,6 +586,42 @@ void setup()
     delay(1000);
 
 #ifdef C_ENABLE_LCD_CAM_CONTROLLER
+
+    Serial.println("Wait for frame...");
+
+    if (xSemaphoreTake(Sframe_rdy, pdMS_TO_TICKS(10000)))
+    {
+        Serial.printf("Frame received! Size: %u bytes\n", received_frame_size);
+
+        // Use the received frame
+        esp_cam_ctlr_trans_t my_trans;
+        my_trans.buffer = rx_frame_buf;
+        my_trans.buflen = received_frame_size;
+        my_trans.received_size = received_frame_size;
+
+        Serial.println("*FRAME");
+        delay(750);
+        on_frame_ready(&my_trans);
+        Serial.println("**DONE");
+    }
+    else
+    {
+        Serial.println("Timeout waiting for frame (10s)");
+    }
+
+    // size_t frame_bytes = 720* 480 * 2;
+    // esp_cam_ctlr_trans_t my_trans;
+    // my_trans.buffer = malloc(frame_bytes);
+    // my_trans.buflen = frame_bytes;
+    // Serial.println("Receive Frame");
+    // esp_err_t err4;
+    // err4 = esp_cam_ctlr_receive(cam_handle,&my_trans ,ESP_CAM_CTLR_MAX_DELAY);
+    // if(err4!=ESP_OK){
+    //     Serial.print("(4) ERROR  0x");
+    //     Serial.println(err4, HEX);
+    //     while(1) {};
+    // }
+    // Serial.println("Received Frame");
 
     Serial.println("Waiting for first frame from camera...");
 
