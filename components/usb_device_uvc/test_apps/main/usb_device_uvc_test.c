@@ -19,13 +19,13 @@ static const char *TAG = "usb_device_uvc_test";
 
 // Some resources are lazy allocated in GPTimer driver, the threshold is left for that case
 #define TEST_MEMORY_LEAK_THRESHOLD (-300)
-#define UVC_MAX_FRAMESIZE_SIZE     (60*1024)
-#define WIDTH   CONFIG_UVC_CAM1_FRAMESIZE_WIDTH
-#define HEIGHT  CONFIG_UVC_CAM1_FRAMESIZE_HEIGT
+#define UVC_MAX_FRAMESIZE_SIZE (60 * 1024)
+#define WIDTH CONFIG_UVC_CAM1_FRAMESIZE_WIDTH
+#define HEIGHT CONFIG_UVC_CAM1_FRAMESIZE_HEIGT
 #define TEST_COUNT (15)
 
 extern const unsigned char jpg_start[] asm("_binary_esp_1280_720_jpg_start");
-extern const unsigned char jpg_end[]   asm("_binary_esp_1280_720_jpg_end");
+extern const unsigned char jpg_end[] asm("_binary_esp_1280_720_jpg_end");
 
 static uvc_fb_t s_fb;
 
@@ -49,7 +49,7 @@ static void camera_fb_return_cb(uvc_fb_t *fb, void *cb_ctx)
     assert(fb == &s_fb);
 }
 
-static uvc_fb_t* camera_fb_get_cb(void *cb_ctx)
+static uvc_fb_t *camera_fb_get_cb(void *cb_ctx)
 {
     (void)cb_ctx;
     uint64_t us = (uint64_t)esp_timer_get_time();
@@ -61,7 +61,8 @@ static uvc_fb_t* camera_fb_get_cb(void *cb_ctx)
     s_fb.timestamp.tv_sec = us / 1000000UL;
     s_fb.timestamp.tv_usec = us % 1000000UL;
 
-    if (s_fb.len > UVC_MAX_FRAMESIZE_SIZE) {
+    if (s_fb.len > UVC_MAX_FRAMESIZE_SIZE)
+    {
         ESP_LOGE(TAG, "Frame size %d is larger than max frame size %d", s_fb.len, UVC_MAX_FRAMESIZE_SIZE);
         return NULL;
     }
@@ -86,7 +87,8 @@ TEST_CASE("usb_device_uvc_test", "[usb_device_uvc]")
     };
     uvc_device_config(0, &config);
     uvc_device_init();
-    for (int i = 0; i < TEST_COUNT; i++) {
+    for (int i = 0; i < TEST_COUNT; i++)
+    {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         ESP_LOGI(TAG, "UVC Device Test: %d", i);
     }

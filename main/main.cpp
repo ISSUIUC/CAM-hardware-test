@@ -482,7 +482,7 @@ void setup()
 
     Serial.println("Wait for frame...");
 
-    if (xSemaphoreTake(Sframe_rdy, pdMS_TO_TICKS(10000)))
+    if (xSemaphoreTake(Sframe_rdy, pdMS_TO_TICKS(15000)))
     {
         Serial.printf("Frame received! Size: %u bytes\n", received_frame_size);
 
@@ -496,32 +496,7 @@ void setup()
         delay(750);
         on_frame_ready(&my_trans);
         Serial.println("**DONE");
-    }
-    else
-    {
-        Serial.println("Timeout waiting for frame (10s)");
-    }
 
-    // size_t frame_bytes = 720* 480 * 2;
-    // esp_cam_ctlr_trans_t my_trans;
-    // my_trans.buffer = malloc(frame_bytes);
-    // my_trans.buflen = frame_bytes;
-    // Serial.println("Receive Frame");
-    // esp_err_t err4;
-    // err4 = esp_cam_ctlr_receive(cam_handle,&my_trans ,ESP_CAM_CTLR_MAX_DELAY);
-    // if(err4!=ESP_OK){
-    //     Serial.print("(4) ERROR  0x");
-    //     Serial.println(err4, HEX);
-    //     while(1) {};
-    // }
-    // Serial.println("Received Frame");
-
-    Serial.println("Waiting for first frame from camera...");
-
-    if (xSemaphoreTake(Sframe_rdy, pdMS_TO_TICKS(15000)))
-    {
-
-        Serial.printf("Size: %u bytes\n", received_frame_size);
         Serial.println("Running H264 encode->decode test");
 
         H264_ENC enc;
@@ -615,6 +590,20 @@ void setup()
     {
         Serial.println("Timeout waiting for frame (15s)");
     }
+
+    // size_t frame_bytes = 720* 480 * 2;
+    // esp_cam_ctlr_trans_t my_trans;
+    // my_trans.buffer = malloc(frame_bytes);
+    // my_trans.buflen = frame_bytes;
+    // Serial.println("Receive Frame");
+    // esp_err_t err4;
+    // err4 = esp_cam_ctlr_receive(cam_handle,&my_trans ,ESP_CAM_CTLR_MAX_DELAY);
+    // if(err4!=ESP_OK){
+    //     Serial.print("(4) ERROR  0x");
+    //     Serial.println(err4, HEX);
+    //     while(1) {};
+    // }
+    // Serial.println("Received Frame");
 
 #endif
 
