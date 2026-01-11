@@ -7,6 +7,9 @@ CONFIG_TINYUSB_ENABLED=y
 CONFIG_TINYUSB_CDC_ENABLED=y
 CONFIG_TINYUSB_CDC_COUNT=1
 
+# esp32-s3 uses this but idk about p4 because I can't find it in our directory nor the usb_device_uvc library on github 
+# CONFIG_TINYUSB_VIDEO_ENABLED=y
+
 # Arduino USB mode (0 = external PHY/OTG, 1 = internal USB-JTAG)
 CONFIG_ARDUINO_USB_MODE=0
 CONFIG_ARDUINO_USB_CDC_ON_BOOT=1

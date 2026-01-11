@@ -10,6 +10,10 @@ extern size_t received_frame_size;
 
 static uvc_fb_t s_fb;
 
+// GOOD reference:
+//  https://github.com/espressif/esp-iot-solution/blob/master/examples/usb/device/usb_webcam/main/usb_webcam_main.c#L259
+// https://github.com/espressif/esp-iot-solution/blob/aa0f3cbe0ce23babddb9202047119dc6b79b403c/docs/en/usb/usb_overview/tinyusb_development_guide.rst#L111
+
 // when the uvc device is opened
 static esp_err_t uvc_start_cb(uvc_format_t format, int width, int height, int rate, void *cb_ctx)
 {
@@ -17,6 +21,8 @@ static esp_err_t uvc_start_cb(uvc_format_t format, int width, int height, int ra
 
     Serial.printf("UVC Start: format=%d, %dx%d @ %d fps\n", format, width, height, rate);
     // can later implement starting functions here like starting encoder and camera :)
+    // Usually you would want to start the camera AFTER starting the uvc stuff.
+
     return ESP_OK;
 }
 

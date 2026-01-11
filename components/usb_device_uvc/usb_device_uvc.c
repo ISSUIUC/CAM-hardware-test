@@ -18,6 +18,8 @@
 #include "tusb.h"
 #include "include/usb_device_uvc.h"
 
+#include "tusb/tusb_config.h"
+
 static const char *TAG = "usbd_uvc";
 
 #if CONFIG_UVC_SUPPORT_TWO_CAM
@@ -84,6 +86,8 @@ static void tusb_device_task(void *arg)
     vTaskDelete(NULL);
 }
 
+/*
+
 void tud_mount_cb(void)
 {
     ESP_LOGI(TAG, "Mount");
@@ -117,6 +121,7 @@ void tud_resume_cb(void)
 {
     ESP_LOGI(TAG, "Resume");
 }
+*/
 
 #if (CFG_TUD_VIDEO)
 //--------------------------------------------------------------------+
