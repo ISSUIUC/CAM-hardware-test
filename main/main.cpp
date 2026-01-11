@@ -637,7 +637,7 @@ void setup()
 void loop()
 {
 #ifdef UVC_USB_DEVICE
-
+// TODO
 #endif
 
     vTaskDelay(pdMS_TO_TICKS(1000));

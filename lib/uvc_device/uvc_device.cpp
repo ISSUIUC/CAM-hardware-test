@@ -1,4 +1,5 @@
 #include "uvc_device.h"
+#include "venc.h"
 
 extern SemaphoreHandle_t Sframe_rdy;
 extern uint8_t *rx_frame_buf;
