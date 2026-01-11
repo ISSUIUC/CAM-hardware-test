@@ -11,6 +11,16 @@
 
 #include "esp_h264_dec_sw.h"
 
+#define CAMERA_FPS 24
+#define FRAMESIZE_WIDTH 720
+#define FRAMESIZE_HEIGHT 480
+
+#define BITRATE FRAMESIZE_WIDTH * FRAMESIZE_HEIGHT * CAMERA_FPS / 100
+
+#define QMIN 26
+#define QMAX 30
+#define GOP 30
+
 enum enc_type
 {
     HW,

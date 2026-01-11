@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include "usb_device_uvc.h"
+#include "venc.h"
 
 class UVC_device
 {

@@ -21,7 +21,7 @@ static esp_err_t uvc_start_cb(uvc_format_t format, int width, int height, int ra
     return ESP_OK;
 }
 
-// when the uvc device wants a frame. (implement in main.cpp?)
+// when the uvc device wants a frame
 static uvc_fb_t *uvc_get_fb_cb(void *cb_ctx)
 {
     (void)cb_ctx;
@@ -41,8 +41,51 @@ static uvc_fb_t *uvc_get_fb_cb(void *cb_ctx)
     }
     else
     {
-        Serial.println("UVC FB CALL BACK - Waited 1 sec and no frame :(");
+        Serial.println("[ERROR] [uvc_get_fb_cb] UVC FB CALL BACK - Waited 1 sec and no frame :(");
     }
+    return nullptr;
+}
+
+static uvc_fb_t *uvc_get_fb_cb_with_encoding(void *cb_ctx)
+{
+    (void)cb_ctx;
+    uint64_t us = (uint64_t)esp_timer_get_time();
+
+    if (xSemaphoreTake(Sframe_rdy, pdMS_TO_TICKS(1000)))
+    {
+        // Encode frame to H264
+        H264_ENC enc;
+        esp_h264_enc_cfg_t enc_cfg = enc.set_config_H264_enc_single(ESP_H264_RAW_FMT_O_UYY_E_VYY, CAMERA_FPS, FRAMESIZE_HEIGHT, FRAMESIZE_WIDTH, BITRATE, QMIN, QMAX, GOP);
+        esp_h264_err_t ret = enc.init_H264_enc_single(enc_cfg, HW);
+
+        if (ret == ESP_H264_ERR_OK)
+        {
+            esp_h264_enc_in_frame_t *in_frame = enc.get_inframe();
+            in_frame->raw_data.buffer = rx_frame_buf;
+            in_frame->raw_data.len = received_frame_size;
+            in_frame->pts = (uint32_t)millis();
+
+            if (enc.run_H264_enc_single() == ESP_H264_ERR_OK)
+            {
+                esp_h264_enc_out_frame_t *out = enc.get_outframe();
+
+                s_fb.buf = out->raw_data.buffer;
+                s_fb.len = out->length;
+                s_fb.width = WIDTH;
+                s_fb.height = HEIGHT;
+                s_fb.format = UVC_FORMAT_H264;
+                s_fb.timestamp.tv_sec = us / 1000000UL;
+                s_fb.timestamp.tv_usec = us % 1000000UL;
+            }
+            enc.close_H264_enc_single();
+        }
+        return &s_fb;
+    }
+    else
+    {
+        Serial.println("[ERROR] [uvc_get_fb_cb_with_encoding] UVC FB CALL BACK - Waited 1 sec and no frame :(");
+    }
+
     return nullptr;
 }
 
@@ -80,7 +123,7 @@ void UVC_device::init()
         .uvc_buffer = uvc_buf,
         .uvc_buffer_size = UVC_MAX_FRAMESIZE_SIZE,
         .start_cb = uvc_start_cb,
-        .fb_get_cb = uvc_get_fb_cb,
+        .fb_get_cb = uvc_get_fb_cb_with_encoding,
         .fb_return_cb = uvc_return_fb_cb,
         .stop_cb = uvc_stop_cb,
         .cb_ctx = NULL,
