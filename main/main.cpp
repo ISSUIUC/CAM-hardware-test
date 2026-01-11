@@ -25,6 +25,7 @@ USBCDC USBSerial;
 #include "venc.h"
 
 #include "esp_heap_caps.h"
+#include "uvc_device.h"
 
 #define CORE_0 0
 #define CORE_1 1
@@ -34,6 +35,8 @@ USBCDC USBSerial;
 // #define C_ENABLE_TVP_DECODE
 
 // #define CAM2_Select
+
+//------------------------------------------------
 
 // Video Test Pipeline #1 || TVP5151 Setup:
 
@@ -58,17 +61,26 @@ USBCDC USBSerial;
 // Video Test Pipeline #3
 // TVP5151 Setup + CAM_Controller Initization + Format Conversion YUV422 > YUV420 > USB-C
 
-// Set-up GPIO Matrix of ESP32 P4 || Initialize CAM Controller using esp driver
+// #define C_ENABLE_CAM_CONTROL
+// #define CAM1_Select
+// #define C_ENABLE_TVP_DECODE
+
+// #define C_ENABLE_LCD_CAM_CONTROLLER
 
 // Convert Video Format from YUV422 to YUV420
 
 #define VIDEO_CONVERSION_YUV
+
+#define UVC_USB_DEVICE
+
+//---------------------------
 
 // RHSoftwareSPI _rspi;
 // RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
 
 tvp5151 tvp(TVP5151_PDN, TVP5151_RESET, TVP5151_ADDR, &Wire);
 LCD_CAM_Module cam_ctrl;
+UVC_device uvc;
 
 static SemaphoreHandle_t Sframe_rdy = NULL;
 static uint8_t *rx_frame_buf = NULL;
@@ -497,6 +509,7 @@ void setup()
         on_frame_ready(&my_trans);
         Serial.println("**DONE");
 
+#ifdef UVC_USB_DEVICE
         Serial.println("Running H264 encode->decode test");
 
         H264_ENC enc;
@@ -585,6 +598,7 @@ void setup()
                 }
             }
         }
+#endif
     }
     else
     {

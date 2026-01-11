@@ -41,7 +41,7 @@ static uvc_fb_t *uvc_get_fb_cb(void *cb_ctx)
     }
     else
     {
-        Serial.println("Waited 1 sec and no frame :(");
+        Serial.println("UVC FB CALL BACK - Waited 1 sec and no frame :(");
     }
     return nullptr;
 }
