@@ -120,6 +120,9 @@ void task_h264_encode_decode(void *arg)
 {
     if (xSemaphoreTake(Sframe_rdy, pdMS_TO_TICKS(15000)))
     {
+
+        // TODO: before this step need to convert YUV422 to YUV420
+
         Serial.printf("Size: %u bytes\n", received_frame_size);
         Serial.println("Running H264 encode->decode test");
 
