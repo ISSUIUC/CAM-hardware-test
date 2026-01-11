@@ -88,9 +88,10 @@ tvp5151 tvp(TVP5151_PDN, TVP5151_RESET, TVP5151_ADDR, &Wire);
 LCD_CAM_Module cam_ctrl;
 UVC_device uvc;
 
-static SemaphoreHandle_t Sframe_rdy = NULL;
-static uint8_t *rx_frame_buf = NULL;
-static size_t received_frame_size = 0;
+// Frame signaling/buffers — give external linkage so other C++ files can reference them via `extern`
+SemaphoreHandle_t Sframe_rdy = NULL;
+uint8_t *rx_frame_buf = NULL;
+size_t received_frame_size = 0;
 
 static bool IRAM_ATTR dvp_trans_finished(esp_cam_ctlr_handle_t handle, esp_cam_ctlr_trans_t *trans, void *user_data)
 {
