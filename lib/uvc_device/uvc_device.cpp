@@ -7,8 +7,6 @@ extern size_t received_frame_size;
 
 // I don't know how this is calculated but it was in the C file
 #define UVC_MAX_FRAMESIZE_SIZE (60 * 1024)
-#define WIDTH CONFIG_UVC_CAM1_FRAMESIZE_WIDTH
-#define HEIGHT CONFIG_UVC_CAM1_FRAMESIZE_HEIGT
 
 static uvc_fb_t s_fb;
 
@@ -33,8 +31,8 @@ static uvc_fb_t *uvc_get_fb_cb(void *cb_ctx)
     {
         s_fb.buf = rx_frame_buf;
         s_fb.len = received_frame_size;
-        s_fb.width = WIDTH;
-        s_fb.height = HEIGHT;
+        s_fb.width = FRAMESIZE_WIDTH;
+        s_fb.height = FRAMESIZE_HEIGHT;
         s_fb.format = UVC_FORMAT_H264;
         s_fb.timestamp.tv_sec = us / 1000000UL;
         s_fb.timestamp.tv_usec = us % 1000000UL;
@@ -72,8 +70,8 @@ static uvc_fb_t *uvc_get_fb_cb_with_encoding(void *cb_ctx)
 
                 s_fb.buf = out->raw_data.buffer;
                 s_fb.len = out->length;
-                s_fb.width = WIDTH;
-                s_fb.height = HEIGHT;
+                s_fb.width = FRAMESIZE_WIDTH;
+                s_fb.height = FRAMESIZE_HEIGHT;
                 s_fb.format = UVC_FORMAT_H264;
                 s_fb.timestamp.tv_sec = us / 1000000UL;
                 s_fb.timestamp.tv_usec = us % 1000000UL;
