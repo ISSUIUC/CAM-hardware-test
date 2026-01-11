@@ -63,30 +63,6 @@ static void uvc_stop_cb(void *cb_ctx)
 
 void UVC_device::init()
 {
-    /*
-       uint8_t *uvc_buffer = (uint8_t *)malloc(UVC_MAX_FRAMESIZE_SIZE);
-    TEST_ASSERT_NOT_NULL(uvc_buffer);
-
-    uvc_device_config_t config = {
-        .uvc_buffer = uvc_buffer,
-        .uvc_buffer_size = UVC_MAX_FRAMESIZE_SIZE,
-        .start_cb = camera_start_cb,
-        .fb_get_cb = camera_fb_get_cb,
-        .fb_return_cb = camera_fb_return_cb,
-        .stop_cb = camera_stop_cb,
-        .cb_ctx = NULL,
-    };
-    uvc_device_config(0, &config);
-    uvc_device_init();
-    for (int i = 0; i < TEST_COUNT; i++)
-    {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        ESP_LOGI(TAG, "UVC Device Test: %d", i);
-    }
-    uvc_device_deinit();
-    free(uvc_buffer);
-    */
-
     // Allocate UVC buffer (should be larger than max frame size)
     // right now we use malloc might want to switch to heap_caps_malloc later...
     // max possible size
