@@ -530,3 +530,95 @@ void loop()
 {
     vTaskDelay(pdMS_TO_TICKS(1000));
 }
+
+// tester code
+//  Serial.println("Running H264 encode->decode test");
+
+// H264_ENC enc;
+// esp_h264_enc_cfg_t enc_cfg = enc.set_config_H264_enc_single(ESP_H264_RAW_FMT_O_UYY_E_VYY, 24, 480, 720, 82944, 26, 30, 30);
+// esp_h264_err_t ret = enc.init_H264_enc_single(enc_cfg, HW);
+// if (ret != ESP_H264_ERR_OK)
+// {
+//     Serial.println("ENC hardware init failed...trying software");
+//     ret = enc.init_H264_enc_single(enc_cfg, SW);
+//     if (ret != ESP_H264_ERR_OK)
+//         Serial.println("software failed too...");
+// }
+// else
+// {
+
+//     esp_h264_enc_in_frame_t *in_frame = enc.get_inframe();
+//     esp_h264_pkt_t packet;
+//     packet.buffer = (uint8_t *)my_trans.buffer;
+//     packet.len = my_trans.buflen;
+//     in_frame->raw_data = packet;
+//     in_frame->pts = (uint32_t)millis(); // TODO: idk how to set pts/if this is the right way... (might wanna look at esp_h264_enc_dual.cpp&.h)
+//     esp_h264_err_t ret = enc.run_H264_enc_single();
+
+//     if (ret != ESP_H264_ERR_OK)
+//     {
+//         Serial.println("ENC process failed");
+//     }
+//     else
+//     {
+//         esp_h264_enc_out_frame_t *e_out_frame = enc.get_outframe();
+//         uint32_t enc_pkt_len = e_out_frame->length;
+//         uint8_t *enc_pkt = e_out_frame->raw_data.buffer;
+//         uint32_t enc_dts = e_out_frame->dts; // need to look into this plz
+//         uint32_t enc_pts = e_out_frame->pts; // need to look into this plz/i believe i can do this
+
+//         Serial.print("Encoded bytes: ");
+//         Serial.println((uint32_t)enc_pkt_len);
+
+//         Serial.println("Decoder time! Oh boi.");
+//         H264_DEC dec;
+//         esp_h264_enc_cfg_t dec_cfg = dec.set_config_H264_dec_single(ESP_H264_RAW_FMT_I420, 24, 480, 720, 82944, 26, 30, 30);
+//         if (dec.init_H264_dec_single(dec_cfg) != ESP_H264_ERR_OK)
+//         {
+//             Serial.println("DEC init failed");
+//         }
+//         else
+//         {
+//             esp_h264_dec_in_frame_t *in_frame = dec.get_inframe();
+//             // use the true length not the buffer's length might be a bad choice but we can go with it.
+//             in_frame->raw_data.buffer = enc_pkt;
+//             in_frame->raw_data.len = enc_pkt_len;
+
+//             // other option that we can use:
+//             // in_frame->raw_data = e_out_frame->raw_data;
+
+//             in_frame->dts = enc_dts;
+//             in_frame->pts = enc_pts;
+
+//             Serial.println("Decoding while loop....");
+//             while (in_frame->raw_data.len)
+//             {
+//                 esp_h264_err_t ret = dec.run_H264_dec_single();
+//                 if (ret != ESP_H264_ERR_OK)
+//                 {
+//                     Serial.print("Error code: ");
+//                     // ESP_H264_ERR_OK             = 0,   /*<! Succeeded */
+//                     // ESP_H264_ERR_FAIL = -1,            /*<! Failed */
+//                     // ESP_H264_ERR_ARG = -2,         /*<! Invalid arguments */
+//                     // ESP_H264_ERR_MEM = -3,         /*<! Insufficient memory */
+//                     // ESP_H264_ERR_UNSUPPORTED = -5, /*<! Un-supported */
+//                     // ESP_H264_ERR_TIMEOUT = -6,     /*<! Timeout */
+//                     // ESP_H264_ERR_OVERFLOW = -7,    /*<! Buffer overflow */
+//                     Serial.println(ret);
+//                     break;
+//                 }
+//                 in_frame->raw_data.buffer += in_frame->consume;
+//                 in_frame->raw_data.len -= in_frame->consume; // consume set by decoder as decoding happens
+//             }
+
+//             esp_h264_dec_out_frame_t *out_frame = dec.get_outframe();
+//             uint32_t out_yuv_len = out_frame->out_size;
+
+//             Serial.print("Decoded bytes: ");
+//             Serial.println((uint32_t)out_yuv_len);
+
+//             dec.close_H264_dec_single();
+//         }
+//         enc.close_H264_enc_single();
+//     }
+// }

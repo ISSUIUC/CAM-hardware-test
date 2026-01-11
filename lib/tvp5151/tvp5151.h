@@ -30,12 +30,6 @@ enum class VideoStandard : uint8_t
     SECAM = 0b1011
 };
 
-enum VideoOutputFormat
-{
-    DISCRETE_SYNC_YCBCR_422 = 0x00, // Uses HSYNC/VSYNC pins
-    EMBEDDED_SYNC_BT656 = 0x07      // Uses SAV/EAV codes (No sync pins needed)
-};
-
 typedef struct
 {
     uint8_t data;
@@ -134,7 +128,7 @@ public:
     bool set_ycbcr_output_enable(bool enable_ycbcr_output);
     bool set_clock_output_enable(bool enable_clock);
     bool reset_miscellaneous_controls_register();
-    bool set_output_format(VideoOutputFormat format);
+    bool set_yCbCr_output_format(bool format);
 
     //------
 

@@ -415,28 +415,37 @@ bool tvp5151::set_hsync_vsync_avid_fid_outputs_enable(bool enable)
     return modify_register_bit(TVP_REG_MISC_CONTROLS, 0x04, enable);
 }
 
-/* 3.21.13 Outputs and Data Rates Select Register
-Bit 3 controls the format.
+// 3.21.13 Outputs and Data Rates Select Register
 
 // YCbCr output format
-// 000 = 8-bit 4:2:2 YCbCr with discrete sync output
+// 000 = 8-bit 4:2:2 YCbCr with discrete sync output (true)
 // 001 = Reserved
 // 010 = Reserved
 // 011 = Reserved
 // 100 = Reserved
 // 101 = Reserved
 // 110 = Reserved
-// 111 = 8-bit ITU-R BT.656 interface with embedded sync output (default)
-
-0 = Discrete Syncs (HSYNC/VSYNC active)
-7 = BT.656 (Embedded Syncs)
-*/
-bool tvp5151::set_output_format(VideoOutputFormat format)
+// 111 = 8-bit ITU-R BT.656 interface with embedded sync output (default) (false)
+bool tvp5151::set_yCbCr_output_format(bool format)
 {
 
-    return write_register(TVP_OUTPUT_DATA_SELECT, (uint8_t)format);
-}
+    if (format)
+    {
+        if (!rmw_reg(TVP_OUTPUT_DATA_SELECT, 0x07, 0x00))
+        {
+            return false;
+        } // = 8-bit 4:2:2 YCbCr with discrete sync output (true)
+    }
+    else
+    {
+        if (!rmw_reg(TVP_OUTPUT_DATA_SELECT, 0x07, 0x07))
+        {
+            return false; // 8-bit ITU-R BT.656 interface with embedded sync output (default) (false)
+        }
+    }
 
+    return true;
+}
 /*
 3.21.15 Configuration Shared Pins Register | Bit 1 (Page 40)
 INTREQ/GPCL/VBLK (pin 27) function select
@@ -653,6 +662,16 @@ bool tvp5151::modify_register_bit(uint8_t reg, uint8_t bit_mask, bool state)
     if (!write_register(reg, data))
         return false;
 
+    return true;
+}
+
+bool tvp5151::rmw_reg(uint8_t reg, uint8_t clear_mask, uint8_t set_mask)
+{
+    tvp_i2c_result_t result = read_register(reg);
+    uint8_t current = result.data;
+    current &= ~clear_mask;
+    current |= set_mask;
+    write_register(reg, current);
     return true;
 }
 
