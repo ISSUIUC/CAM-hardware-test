@@ -564,6 +564,8 @@ void setup()
                 Serial.print("Encoded bytes: ");
                 Serial.println((uint32_t)enc_pkt_len);
 
+                enc.close_H264_enc_single();
+
                 Serial.println("Decoder time! Oh boi.");
                 H264_DEC dec;
                 esp_h264_enc_cfg_t dec_cfg = dec.set_config_H264_dec_single(ESP_H264_RAW_FMT_I420, 24, 480, 720, 82944, 26, 30, 30);
@@ -606,7 +608,6 @@ void setup()
 
                     dec.close_H264_dec_single();
                 }
-                enc.close_H264_enc_single();
             }
         }
     }
