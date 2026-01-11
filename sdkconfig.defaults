@@ -13,3 +13,8 @@ CONFIG_ARDUINO_USB_CDC_ON_BOOT=1
 
 # Disable USB Serial/JTAG since we're using USB OTG
 # CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG is not set
+
+# Enable PSRAM for camera frame buffers
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_200M=y

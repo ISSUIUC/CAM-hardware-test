@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 #include "USB.h"
 #include "USBCDC.h"
 
@@ -38,9 +39,9 @@ USBCDC USBSerial;
 
 // TVP5151 Setup + Camera Init
 
-// #define C_ENABLE_CAM_CONTROL
-// #define CAM1_Select
-// #define C_ENABLE_TVP_DECODE
+#define C_ENABLE_CAM_CONTROL
+#define CAM2_Select // RunCam is on AIP1B, not AIP1A
+#define C_ENABLE_TVP_DECODE
 
 // Video Test Pipeline #2 || TVP5151 Setup + CAM_Controller Initization + Output YUV422 || One FRAME
 
@@ -69,13 +70,33 @@ USBCDC USBSerial;
 
 // Convert Video Format from YUV422 to YUV420
 
-// #define VIDEO_CONVERSION_YUV
+#define VIDEO_CONVERSION_YUV
 
 // RHSoftwareSPI _rspi;
 // RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
 
 tvp5151 tvp(TVP5151_PDN, TVP5151_RESET, TVP5151_ADDR, &Wire);
 LCD_CAM_Module cam_ctrl;
+
+static SemaphoreHandle_t Sframe_rdy = NULL;
+static uint8_t *rx_frame_buf = NULL;
+static size_t received_frame_size = 0;
+
+static bool IRAM_ATTR dvp_trans_finished(esp_cam_ctlr_handle_t handle, esp_cam_ctlr_trans_t *trans, void *user_data)
+{
+    rx_frame_buf = (uint8_t *)trans->buffer;
+    received_frame_size = trans->received_size;
+
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xSemaphoreGiveFromISR(Sframe_rdy, &xHigherPriorityTaskWoken);
+
+    return xHigherPriorityTaskWoken == pdTRUE;
+}
+
+static bool IRAM_ATTR dvp_get_new_trans(esp_cam_ctlr_handle_t handle, esp_cam_ctlr_trans_t *trans, void *user_data)
+{
+    return false;
+}
 
 #ifdef IS_CAM
 const int LED_PIN = 51;
@@ -119,19 +140,6 @@ void on_frame_ready(const esp_cam_ctlr_trans_t *trans)
     uint32_t len = (uint32_t)trans->received_size; // length
     uint8_t *buf = (uint8_t *)trans->buffer;
 
-    Serial.print("Setup Variables");
-
-    Serial.print("Printing Magic");
-
-    Serial.write((uint8_t *)&magic, 4);
-
-    Serial.println("PRINTED Magic");
-
-    Serial.println("Printing Length");
-
-    Serial.print(len);
-    Serial.println("PRINTED Length");
-
     while (off < len)
     { // making sure we don't overload usb write and instead send in chunks
         uint32_t chunk = len - off;
@@ -139,9 +147,11 @@ void on_frame_ready(const esp_cam_ctlr_trans_t *trans)
         if (chunk > 512)
             chunk = 512;
 
-        Serial.println("Writing Chunk");
+        // Serial.println("Writing Chunk");
         size_t wrote = Serial.write(buf + off, chunk);
-        Serial.println("PRINTED Chunk");
+        Serial.flush();
+        vTaskDelay(pdMS_TO_TICKS(1));
+        // Serial.println("PRINTED Chunk");
 
         off += chunk;
 
@@ -151,14 +161,15 @@ void on_frame_ready(const esp_cam_ctlr_trans_t *trans)
             vTaskDelay(pdMS_TO_TICKS(1));
         }
     }
+
+    Serial.println();
+    Serial.println(len);
 }
 
 void setup()
 {
     USB.begin();
     Serial.begin(115200);
-
-    delay(15000);
 
 #ifdef IS_CAM
     Wire.begin(I2C_SDA, I2C_SCL);
@@ -181,268 +192,16 @@ void setup()
     };
     delay(50);
 
-#ifdef C_ENABLE_CAM_CONTROL
-    pinMode(CAM1_ON_OFF, OUTPUT);
-    pinMode(LED_RED, OUTPUT);
-    // Serial1.begin(9600, CAM)
-    digitalWrite(CAM1_ON_OFF, LOW);
-    digitalWrite(LED_RED, LOW);
+    Serial.println("Cam dvp controller init");
 
-    Serial.println("WARNING : Turning on camera in 1.5s!");
-    delay(1500);
-
-    digitalWrite(CAM1_ON_OFF, HIGH);
-    digitalWrite(LED_RED, HIGH);
-
-#endif
-
-#ifdef C_ENABLE_TVP_DECODE
-
-    for (uint8_t i = 0; i < 8; i++)
+    Sframe_rdy = xSemaphoreCreateBinary();
+    if (!Sframe_rdy)
     {
-        pinMode(YOUT[i], INPUT);
-    }
-    Serial.println("Set up YOUT");
-
-    if (!tvp.init())
-    {
-        Serial.println("TVP failed to init.");
+        Serial.println("Failed to create frame semaphore");
         while (1)
         {
         };
     }
-    Serial.println("TVP Success INIT");
-
-#ifdef CAM1_Select
-
-    if (!tvp.source_select(CAM1))
-    {
-        Serial.println("CAM 1 failed to select.");
-        while (1)
-        {
-        };
-    }
-    Serial.println("CAM1 Success Select");
-#endif
-
-#ifdef CAM2_Select
-
-    if (!tvp.source_select(CAM2))
-    {
-        Serial.println("CAM 2 failed to select.");
-        while (1)
-        {
-        };
-    }
-    Serial.println("CAM2 Success Select");
-
-#endif
-
-    if (!tvp.set_ycbcr_output_enable(true))
-    {
-        Serial.println("TVP failed to enable output data.");
-        while (1)
-        {
-        };
-    }
-    Serial.println("TVP Output Data Success.");
-
-    if (!tvp.set_clock_output_enable(true))
-    {
-        Serial.println("TVP failed to enable sclk.");
-        while (1)
-        {
-        };
-    }
-    Serial.println("TVP enable sclk Setup Success.");
-
-    if (!tvp.set_output_format(VideoOutputFormat::DISCRETE_SYNC_YCBCR_422))
-    { // enables 8-bit 4:2:2 YCbCr with discrete sync output
-        Serial.println("TVP failed to enable output format 4:2:2");
-        while (1)
-        {
-        };
-    }
-    Serial.println("TVP enable YCbCr Output Format Setup Success.");
-
-    // Test all read functions
-    Serial.println("\n=== TVP5151 Read Functions Test ===\n");
-
-    // Test device ID
-    uint16_t device_id = tvp.read_device_id();
-    Serial.print("Device ID: 0x");
-    Serial.println(device_id, HEX);
-
-    // // Test gain factors
-    // uint8_t cb_gain = tvp.read_cb_gain();
-    // Serial.print("Cb Gain: 0x");
-    // Serial.println(cb_gain, HEX);
-
-    // uint8_t cr_gain = tvp.read_cr_gain();
-    // Serial.print("Cr Gain: 0x");
-    // Serial.println(cr_gain, HEX);
-
-    // // Test lock status functions
-    // Serial.println("\n--- Lock Status ---");
-
-    // bool vsync_locked = tvp.read_vertical_sync_lock_status();
-    // Serial.print("Vertical Sync Locked: ");
-    // Serial.println(vsync_locked ? "YES" : "NO");
-
-    // bool hsync_locked = tvp.read_horizontal_sync_lock_status();
-    // Serial.print("Horizontal Sync Locked: ");
-    // Serial.println(hsync_locked ? "YES" : "NO");
-
-    // bool color_locked = tvp.read_color_subcarrier_lock_status();
-    // Serial.print("Color Subcarrier Locked: ");
-    // Serial.println(color_locked ? "YES" : "NO");
-
-    // // Test other status functions
-    // Serial.println("\n--- Other Status ---");
-
-    // bool peak_white = tvp.read_peak_white_detect_status();
-    // Serial.print("Peak White Detected: ");
-    // Serial.println(peak_white ? "YES" : "NO");
-
-    // bool vcr_mode = tvp.read_vcr_mode();
-    // Serial.print("VCR Mode: ");
-    // Serial.println(vcr_mode ? "YES" : "NO");
-
-    // bool lost_lock = tvp.read_lost_lock_status();
-    // Serial.print("Lost Lock Detected: ");
-    // Serial.println(lost_lock ? "YES" : "NO");
-
-    // bool lock_interrupt = tvp.read_lock_state_interrupt();
-    // Serial.print("Lock State Interrupt: ");
-    // Serial.println(lock_interrupt ? "YES" : "NO");
-
-    // Serial.println("\n=== Test Complete ===\n");
-
-    // bool weak_signal = tvp.read_weak_signal();
-    // Serial.print("Weak Signal Detection: ");
-    // Serial.println(weak_signal ? "Weak Signal Mode" : "No Weak Signal");
-
-    // // Test all write functions
-    // Serial.println("\n=== TVP5151 Write Functions Test ===\n");
-
-    // // Test clock output enable
-    // Serial.println("Testing set_clock_output_enable(true)...");
-    // if (tvp.set_clock_output_enable(true))
-    // {
-    //     Serial.println("✓ Clock output enabled successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ Failed to enable clock output");
-    // }
-    // delay(100);
-
-    // // Test YCbCr output enable
-    // Serial.println("Testing set_ycbcr_output_enable(true)...");
-    // if (tvp.set_ycbcr_output_enable(true))
-    // {
-    //     Serial.println("✓ YCbCr output enabled successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ Failed to enable YCbCr output");
-    // }
-    // delay(100);
-
-    // // Test GPCL logic level
-    // Serial.println("Testing set_gpcl_logic_level(true)...");
-    // if (tvp.set_gpcl_logic_level(true))
-    // {
-    //     Serial.println("✓ GPCL logic level set to 1 successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ Failed to set GPCL logic level");
-    // }
-    // delay(100);
-
-    // Test GPCL output
-    // Serial.println("Testing set_gpcl_output(true)...");
-    // if (tvp.set_gpcl_logic_level(true))
-    // {
-    //     Serial.println("✓ GPCL logic level is now high");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ Failed");
-    // }
-    // delay(100);
-
-    // Serial.println("Testing set_gpcl_or_vblk_output(false)... (meaning vblk output true)");
-    // if (tvp.set_gpcl_or_vblk_output(false))
-    // {
-    //     Serial.println("✓ Vblk is now outputting");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ failed");
-    // }
-    // delay(100);
-
-    // Serial.println("Testing set_gpcl_output(true)...");
-    // if (tvp.set_gpcl_or_vblk_output(true))
-    // {
-    //     Serial.println("✓ GPCL output configured successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ Failed to configure GPCL output");
-    // }
-    // delay(100);
-
-    // Serial.println("Testing set_crop_avid_horizontal(15,-15)...");
-    // if (tvp.set_crop_avid_horizontal(15, -15))
-    // {
-    //     Serial.println("✓ Hori crop set up successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ HORI CROP FAILED ...  :( ");
-    // }
-    // delay(100);
-
-    // Serial.println("Testing set_crop_vblk_vertical(15,-15)...");
-    // if (tvp.set_crop_vblk_vertical(15, -15))
-    // {
-    //     Serial.println("✓ vertical crop set up successfully!");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ verti crop set up failed .. wamp wamp");
-    // }
-    // delay(100);
-
-    // Serial.println("\nResetting crop registers...");
-    // if (tvp.reset_crop())
-    // {
-    //     Serial.println("✓ Registers reset successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ Failed to reset registers");
-    // }
-
-    // // Reset miscellaneous controls register
-    // Serial.println("\nResetting miscellaneous controls register...");
-    // if (tvp.reset_miscellaneous_controls_register())
-    // {
-    //     Serial.println("✓ Register reset successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ Failed to reset register");
-    // }
-
-    // Serial.println("\n=== Write Functions Test Complete ===\n");
-
-#endif
-
-    Serial.println("Transition");
 
 #ifdef C_ENABLE_LCD_CAM_CONTROLLER
 
@@ -454,11 +213,8 @@ void setup()
     // Serial.println(cam_ctrl.read_register_test(0x0018), HEX); dosen't work CRASHES.
 
     // Set up GPIO Matrix...
-
     Serial.println("Configure GPIO Matrix");
-
     cam_ctrl.cam_controller_configure_gpio_matrix(); // configure AVID, YOUT, HSYNC, VSYNC, PCLK pins // WORKS
-
     Serial.println("Configured");
 
     esp_cam_ctlr_handle_t cam_handle = NULL; // initialize a handle which esp uses to store data in
@@ -495,8 +251,8 @@ void setup()
 
     dvp_config.bit_swap_en = 0;
     dvp_config.byte_swap_en = 0;
-    dvp_config.bk_buffer_dis = 1;   /*!< Disable backup buffer */
-    dvp_config.pin_dont_init = 1;   /*!< Don't initialize DVP pins if users have called "esp_cam_ctlr_dvp_init" before */
+    dvp_config.bk_buffer_dis = 0;   /*!< Disable backup buffer */
+    dvp_config.pin_dont_init = 0;   /*!< Let driver initialize DVP pins and enable clocks */
     dvp_config.pic_format_jpeg = 0; /*!< Input picture format is JPEG, if set this flag and "input_data_color_type" will be ignored */
     dvp_config.external_xtal = 1;
 
@@ -504,59 +260,51 @@ void setup()
     dvp_config.xclk_freq = 1;
     dvp_config.pin = &pin_cfg;
 
-    // esp_cam_ctlr_dvp_config_t dvp_config = {
-    // .ctlr_id = 0,
-    // .clk_src = CAM_CLK_SRC_DEFAULT,
-    // .h_res = 720,
-    // .v_res = 480,
-    // .input_data_color_type = CAM_CTLR_COLOR_YUV422,
-    // .cam_data_width = 8,
-
-    // .bit_swap_en = 0,               /*!< Enable bit swap */
-    // .byte_swap_en = 0,              /*!< Enable byte swap
-    //                                                 *
-    //                                                 * GDMA Data Byte Order Table (input: B0,B1,B2,B3,B4,B5, addresses from low to high)
-    //                                                 *
-    //                                                 * | cam_data_width | bit_swap_en | byte_swap_en | Stage 1 Output Data Sequence   |
-    //                                                 * |----------------|-------------|--------------|------------------------------  |
-    //                                                 * | 8-bit          | 0           | 0            | {B0}{B1}{B2}{B3}{B4}{B5}       |
-    //                                                 * | 8-bit          | 0           | 1            | {B1,B0}{B3,B2}{B5,B4}          |
-    //                                                 * | 8-bit          | 1           | 0            | {B0'}{B1'}{B2'}{B3'}{B4'}{B5'} |
-    //                                                 * | 8-bit          | 1           | 1            | {B1',B0'}{B3',B2'}{B5',B4'}    |
-    //                                                 *
-    //                                                 * | 16-bit         | 0           | 0            | {B1,B0}{B3,B2}{B5,B4}          |
-    //                                                 * | 16-bit         | 0           | 1            | {B0,B1}{B2,B3}{B4,B5}          |
-    //                                                 * | 16-bit         | 1           | 0            | {B1',B0'}{B3',B2'}{B5',B4'}    |
-    //                                                 * | 16-bit         | 1           | 1            | {B0',B1'}{B2',B3'}{B4',B5'}    |
-    //                                                 *
-    //                                                 * | 24-bit         | 0           | 0            | {B2,B1,B0}{B5,B4,B3}           |
-    //                                                 * | 24-bit         | 0           | 1            | {B0,B1,B2}{B3,B4,B5}           |
-    //                                                 * | 24-bit         | 1           | 0            | {B2',B1',B0'}{B5',B4',B3'}     |
-    //                                                 * | 24-bit         | 1           | 1            | {B0',B1',B2'}{B3',B4',B5'}     |
-    //                                                 *
-    //                                                 * Where B0' = bit-reversed B0，Bn'[7:0] = Bn[0:7]
-    //                                                 * Each {} contains big-endian parallel data, {} are in serial relationship, output order is left to right
-    //                                                 */
-    // .bk_buffer_dis =1,            /*!< Disable backup buffer */
-    // .pin_dont_init = 1,             /*!< Don't initialize DVP pins if users have called "esp_cam_ctlr_dvp_init" before */
-    // .pic_format_jpeg = 0,           /*!< Input picture format is JPEG, if set this flag and "input_data_color_type" will be ignored */
-    // .external_xtal = 1,
-
-    // .dma_burst_size = 128,
-    // .xclk_freq = 1,
-    // .pin = &pin_cfg,
-    // };
-
     Serial.println("Configure DVP Ctlr");
 
     esp_err_t err;
-    err = esp_cam_new_dvp_ctlr(&dvp_config, &cam_handle); // WORKS No ERROR
+    err = esp_cam_new_dvp_ctlr(&dvp_config, &cam_handle);
 
     if (err != ESP_OK)
     {
-        Serial.print("ERROR 1");
-        Serial.println(err);
+        Serial.print("(1) ERROR  0x");
+        Serial.println(err, HEX);
+        while (1)
+        {
+        };
     }
+
+    esp_cam_ctlr_evt_cbs_t cbs = {
+        .on_get_new_trans = dvp_get_new_trans,
+        .on_trans_finished = dvp_trans_finished,
+    };
+
+    err = esp_cam_ctlr_register_event_callbacks(cam_handle, &cbs, NULL);
+
+    if (err != ESP_OK)
+    {
+        Serial.print("Callback registration ERROR 0x");
+        Serial.println(err, HEX);
+        while (1)
+        {
+        };
+    }
+
+    Serial.println("Callbacks registered");
+
+    // save internal buffer so on_trans_finished runs
+    const void *internal_buf = NULL;
+    err = esp_cam_ctlr_get_frame_buffer(cam_handle, 1, &internal_buf);
+    if (err != ESP_OK)
+    {
+        Serial.print("Get internal buffer ERROR 0x");
+        Serial.println(err, HEX);
+        while (1)
+        {
+        };
+    }
+
+    Serial.printf("Internal buffer @ 0x %p\n", internal_buf);
 
 #ifdef VIDEO_CONVERSION_YUV
 
@@ -572,8 +320,6 @@ void setup()
 
 #endif
 
-    Serial.println((uint32_t)cam_handle);
-
     Serial.println("Enable CAM Ctlr");
 
     esp_err_t err2;
@@ -581,316 +327,206 @@ void setup()
 
     if (err2 != ESP_OK)
     {
-        Serial.print("ERROR 2");
-        Serial.println(err2);
+        Serial.print("(2) ERROR  0x");
+        Serial.println(err2, HEX);
+        while (1)
+        {
+        };
     }
 
     Serial.println("Start CAM Controller");
 
     esp_err_t err3;
-    err3 = esp_cam_ctlr_start(cam_handle); // start cam // no work // might get through enable not do anything and go into start and fail.
+    err3 = esp_cam_ctlr_start(cam_handle);
 
     if (err3 != ESP_OK)
     {
-        Serial.print("ERROR 3");
-        Serial.println(err3);
+        Serial.print("(3) ERROR  0x");
+        Serial.println(err3, HEX);
+        while (1)
+        {
+        };
     }
 
     Serial.print("CAM CONTROLLER START!");
 
-    size_t frame_bytes = 720 * 480 * 2;
+#endif
 
-    esp_cam_ctlr_trans_t my_trans;
+#ifdef C_ENABLE_CAM_CONTROL
+    pinMode(CAM1_ON_OFF, OUTPUT);
+    pinMode(LED_RED, OUTPUT);
+    // Serial1.begin(9600, CAM)
+    digitalWrite(CAM1_ON_OFF, LOW);
+    digitalWrite(LED_RED, LOW);
 
-    // Allocate DMA/cache-aligned internal RAM for frame receive buffer, alignment is 64 bytes
-    my_trans.buffer = heap_caps_aligned_alloc(64, frame_bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
-    if (!my_trans.buffer)
+    digitalWrite(CAM1_ON_OFF, HIGH);
+    digitalWrite(LED_RED, HIGH);
+
+    Serial.println("cam on, waiting for video to stabilize");
+    delay(10000);
+#endif
+
+#ifdef C_ENABLE_TVP_DECODE
+
+    for (uint8_t i = 0; i < 8; i++)
     {
-        Serial.println("ERROR: failed to allocate aligned frame buffer");
+        pinMode(YOUT[i], INPUT);
     }
+    Serial.println("Set up YOUT");
 
-    my_trans.buflen = frame_bytes;
-
-    Serial.println("Receive Frame");
-
-    esp_err_t err4;
-    err4 = esp_cam_ctlr_receive(cam_handle, &my_trans, ESP_CAM_CTLR_MAX_DELAY);
-    if (err4 != ESP_OK)
+    if (!tvp.init())
     {
-        Serial.print("ERROR 4");
-        Serial.println(err4);
-    }
-
-    Serial.println("Received Frame");
-
-    Serial.println("Running H264 encode->decode test");
-
-    H264_ENC enc;
-    esp_h264_enc_cfg_t enc_cfg = enc.set_config_H264_enc_single(ESP_H264_RAW_FMT_O_UYY_E_VYY, 24, 480, 720, 82944, 26, 30, 30);
-    esp_h264_err_t ret = enc.init_H264_enc_single(enc_cfg, HW);
-    if (ret != ESP_H264_ERR_OK)
-    {
-        Serial.println("ENC hardware init failed...trying software");
-        ret = enc.init_H264_enc_single(enc_cfg, SW);
-        if (ret != ESP_H264_ERR_OK)
-            Serial.println("software failed too...");
-    }
-    else
-    {
-
-        esp_h264_enc_in_frame_t *in_frame = enc.get_inframe();
-        esp_h264_pkt_t packet;
-        packet.buffer = (uint8_t *)my_trans.buffer;
-        packet.len = my_trans.buflen;
-        in_frame->raw_data = packet;
-        in_frame->pts = (uint32_t)millis(); // TODO: idk how to set pts/if this is the right way... (might wanna look at esp_h264_enc_dual.cpp&.h)
-        esp_h264_err_t ret = enc.run_H264_enc_single();
-
-        if (ret != ESP_H264_ERR_OK)
+        Serial.println("TVP failed to init.");
+        while (1)
         {
-            Serial.println("ENC process failed");
-        }
-        else
-        {
-            esp_h264_enc_out_frame_t *e_out_frame = enc.get_outframe();
-            uint32_t enc_pkt_len = e_out_frame->length;
-            uint8_t *enc_pkt = e_out_frame->raw_data.buffer;
-            uint32_t enc_dts = e_out_frame->dts; // need to look into this plz
-            uint32_t enc_pts = e_out_frame->pts; // need to look into this plz/i believe i can do this
-
-            Serial.print("Encoded bytes: ");
-            Serial.println((uint32_t)enc_pkt_len);
-
-            Serial.println("Decoder time! Oh boi.");
-            H264_DEC dec;
-            esp_h264_enc_cfg_t dec_cfg = dec.set_config_H264_dec_single(ESP_H264_RAW_FMT_I420, 24, 480, 720, 82944, 26, 30, 30);
-            if (dec.init_H264_dec_single(dec_cfg) != ESP_H264_ERR_OK)
-            {
-                Serial.println("DEC init failed");
-            }
-            else
-            {
-                esp_h264_dec_in_frame_t *in_frame = dec.get_inframe();
-                // use the true length not the buffer's length might be a bad choice but we can go with it.
-                in_frame->raw_data.buffer = enc_pkt;
-                in_frame->raw_data.len = enc_pkt_len;
-
-                // other option that we can use:
-                // in_frame->raw_data = e_out_frame->raw_data;
-
-                in_frame->dts = enc_dts;
-                in_frame->pts = enc_pts;
-
-                Serial.println("Decoding while loop....");
-                while (in_frame->raw_data.len)
-                {
-                    esp_h264_err_t ret = dec.run_H264_dec_single();
-                    if (ret != ESP_H264_ERR_OK)
-                    {
-                        Serial.print("Error code: ");
-                        // ESP_H264_ERR_OK             = 0,   /*<! Succeeded */
-                        // ESP_H264_ERR_FAIL = -1,            /*<! Failed */
-                        // ESP_H264_ERR_ARG = -2,         /*<! Invalid arguments */
-                        // ESP_H264_ERR_MEM = -3,         /*<! Insufficient memory */
-                        // ESP_H264_ERR_UNSUPPORTED = -5, /*<! Un-supported */
-                        // ESP_H264_ERR_TIMEOUT = -6,     /*<! Timeout */
-                        // ESP_H264_ERR_OVERFLOW = -7,    /*<! Buffer overflow */
-                        Serial.println(ret);
-                        break;
-                    }
-                    in_frame->raw_data.buffer += in_frame->consume;
-                    in_frame->raw_data.len -= in_frame->consume; // consume set by decoder as decoding happens
-                }
-
-                esp_h264_dec_out_frame_t *out_frame = dec.get_outframe();
-                uint32_t out_yuv_len = out_frame->out_size;
-
-                Serial.print("Decoded bytes: ");
-                Serial.println((uint32_t)out_yuv_len);
-
-                dec.close_H264_dec_single();
-            }
-            enc.close_H264_enc_single();
-        }
+        };
     }
+    Serial.println("TVP Success INIT");
 
-    Serial.println("Printing FRAME over serial");
+#ifdef CAM1_Select
+    if (!tvp.source_select(CAM1))
+    {
+        Serial.println("CAM 1 failed to select.");
+        while (1)
+        {
+        };
+    }
+    Serial.println("CAM1 Success Select");
+#endif
 
-    on_frame_ready(&my_trans); // send frame over usb.
+#ifdef CAM2_Select
+    if (!tvp.source_select(CAM2))
+    {
+        Serial.println("CAM 2 failed to select.");
+        while (1)
+        {
+        };
+    }
+    Serial.println("CAM2 Success Select");
+#endif
 
-    Serial.println("Printed");
+    if (!tvp.set_ycbcr_output_enable(true))
+    {
+        Serial.println("TVP failed to enable output data.");
+        while (1)
+        {
+        };
+    }
+    Serial.println("TVP Output Data Success.");
+
+    if (!tvp.set_clock_output_enable(true))
+    {
+        Serial.println("TVP failed to enable sclk.");
+        while (1)
+        {
+        };
+    }
+    Serial.println("TVP enable sclk Setup Success.");
+
+    if (!tvp.set_avid_output_enable(true))
+    {
+        Serial.println("TVP failed to enable AVID output.");
+        while (1)
+        {
+        };
+    }
+    Serial.println("TVP AVID Output Enabled.");
+
+    if (!tvp.set_yCbCr_output_format(true))
+    {
+        Serial.println("TVP failed to enable output format 4:2:2");
+        while (1)
+        {
+        };
+    }
+    Serial.println("TVP enable YCbCr Output Format Setup Success.");
+
+    // Test device ID
+    uint16_t device_id = tvp.read_device_id();
+    Serial.print("Device ID: 0x");
+    Serial.println(device_id, HEX);
+
+    // Check vertical line count - if this shows ~525 for NTSC, video IS being processed
+    uint16_t line_count = tvp.read_vertical_line_count();
+    Serial.print("Vertical Line Count: ");
+    Serial.println(line_count);
+
+    bool vsync_locked = tvp.read_vertical_sync_lock_status();
+    Serial.print("Vertical Sync Locked: ");
+    Serial.println(vsync_locked ? "YES" : "NO");
+
+    bool hsync_locked = tvp.read_horizontal_sync_lock_status();
+    Serial.print("Horizontal Sync Locked: ");
+    Serial.println(hsync_locked ? "YES" : "NO");
+
+    bool color_locked = tvp.read_color_subcarrier_lock_status();
+    Serial.print("Color Subcarrier Locked: ");
+    Serial.println(color_locked ? "YES" : "NO");
+
+    // Wait until locked
+    while (!vsync_locked || !hsync_locked || !color_locked)
+    {
+        Serial.println("Waiting for TVP to lock...");
+
+        vsync_locked = tvp.read_vertical_sync_lock_status();
+        hsync_locked = tvp.read_horizontal_sync_lock_status();
+        color_locked = tvp.read_color_subcarrier_lock_status();
+        Serial.print("VSYNC: ");
+        Serial.print(vsync_locked);
+        Serial.print(", HSYNC: ");
+        Serial.print(hsync_locked);
+        Serial.print(", COL: ");
+        Serial.println(color_locked);
+    }
 
 #endif
 
-    Serial.println("init");
+    delay(1000);
+
+#ifdef C_ENABLE_LCD_CAM_CONTROLLER
+
+    Serial.println("Wait for frame...");
+
+    if (xSemaphoreTake(Sframe_rdy, pdMS_TO_TICKS(10000)))
+    {
+        Serial.printf("Frame received! Size: %u bytes\n", received_frame_size);
+
+        // Use the received frame
+        esp_cam_ctlr_trans_t my_trans;
+        my_trans.buffer = rx_frame_buf;
+        my_trans.buflen = received_frame_size;
+        my_trans.received_size = received_frame_size;
+
+        Serial.println("*FRAME");
+        delay(750);
+        on_frame_ready(&my_trans);
+        Serial.println("**DONE");
+    }
+    else
+    {
+        Serial.println("Timeout waiting for frame (10s)");
+    }
+
+    // size_t frame_bytes = 720* 480 * 2;
+    // esp_cam_ctlr_trans_t my_trans;
+    // my_trans.buffer = malloc(frame_bytes);
+    // my_trans.buflen = frame_bytes;
+    // Serial.println("Receive Frame");
+    // esp_err_t err4;
+    // err4 = esp_cam_ctlr_receive(cam_handle,&my_trans ,ESP_CAM_CTLR_MAX_DELAY);
+    // if(err4!=ESP_OK){
+    //     Serial.print("(4) ERROR  0x");
+    //     Serial.println(err4, HEX);
+    //     while(1) {};
+    // }
+    // Serial.println("Received Frame");
+
+#endif
+
     // init_tasks();
 }
 
 void loop()
 {
-    // vTaskDelay(pdMS_TO_TICKS(1000));
-
-    // // Test all read functions
-    // Serial.println("\n=== TVP5151 Read Functions Test ===\n");
-
-    // // Test device ID
-    // uint16_t device_id = tvp.read_device_id();
-    // Serial.print("Device ID: 0x");
-    // Serial.println(device_id, HEX);
-
-    // // Test gain factors
-    // uint8_t cb_gain = tvp.read_cb_gain();
-    // Serial.print("Cb Gain: 0x");
-    // Serial.println(cb_gain, HEX);
-
-    // uint8_t cr_gain = tvp.read_cr_gain();
-    // Serial.print("Cr Gain: 0x");
-    // Serial.println(cr_gain, HEX);
-
-    // // Test lock status functions
-    // Serial.println("\n--- Lock Status ---");
-
-    // bool vsync_locked = tvp.read_vertical_sync_lock_status();
-    // Serial.print("Vertical Sync Locked: ");
-    // Serial.println(vsync_locked ? "YES" : "NO");
-
-    // bool hsync_locked = tvp.read_horizontal_sync_lock_status();
-    // Serial.print("Horizontal Sync Locked: ");
-    // Serial.println(hsync_locked ? "YES" : "NO");
-
-    // bool color_locked = tvp.read_color_subcarrier_lock_status();
-    // Serial.print("Color Subcarrier Locked: ");
-    // Serial.println(color_locked ? "YES" : "NO");
-
-    // // Test other status functions
-    // Serial.println("\n--- Other Status ---");
-
-    // bool peak_white = tvp.read_peak_white_detect_status();
-    // Serial.print("Peak White Detected: ");
-    // Serial.println(peak_white ? "YES" : "NO");
-
-    // bool vcr_mode = tvp.read_vcr_mode();
-    // Serial.print("VCR Mode: ");
-    // Serial.println(vcr_mode ? "YES" : "NO");
-
-    // bool lost_lock = tvp.read_lost_lock_status();
-    // Serial.print("Lost Lock Detected: ");
-    // Serial.println(lost_lock ? "YES" : "NO");
-
-    // bool lock_interrupt = tvp.read_lock_state_interrupt();
-    // Serial.print("Lock State Interrupt: ");
-    // Serial.println(lock_interrupt ? "YES" : "NO");
-
-    // Serial.println("\n=== Test Complete ===\n");
-
-    // bool weak_signal = tvp.read_weak_signal();
-    // Serial.print("Weak Signal Detection: ");
-    // Serial.println(weak_signal ? "Weak Signal Mode" : "No Weak Signal");
-
-    // // Test all write functions
-    // Serial.println("\n=== TVP5151 Write Functions Test ===\n");
-
-    // // Test clock output enable
-    // Serial.println("Testing set_clock_output_enable(true)...");
-    // if (tvp.set_clock_output_enable(true))
-    // {
-    //     Serial.println("✓ Clock output enabled successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ Failed to enable clock output");
-    // }
-    // delay(100);
-
-    // // Test YCbCr output enable
-    // Serial.println("Testing set_ycbcr_output_enable(true)...");
-    // if (tvp.set_ycbcr_output_enable(true))
-    // {
-    //     Serial.println("✓ YCbCr output enabled successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ Failed to enable YCbCr output");
-    // }
-    // delay(100);
-
-    // // Test GPCL logic level
-    // Serial.println("Testing set_gpcl_logic_level(true)...");
-    // if (tvp.set_gpcl_logic_level(true))
-    // {
-    //     Serial.println("✓ GPCL logic level set to 1 successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ Failed to set GPCL logic level");
-    // }
-    // delay(100);
-
-    // // Test GPCL output
-    // Serial.println("Testing set_gpcl_output(true)...");
-    // if (tvp.set_gpcl_or_vblk_output(true))
-    // {
-    //     Serial.println("✓ GPCL output configured successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ Failed to configure GPCL output");
-    // }
-    // delay(100);
-
-    // Serial.println("Testing set_gpcl_output(true)...");
-    // if (tvp.set_gpcl_or_vblk_output(true))
-    // {
-    //     Serial.println("✓ GPCL output configured successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ Failed to configure GPCL output");
-    // }
-    // delay(100);
-
-    // Serial.println("Testing set_crop_avid_horizontal(15,-15)...");
-    // if (tvp.set_crop_avid_horizontal(15, -15))
-    // {
-    //     Serial.println("✓ Hori crop set up successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ HORI CROP FAILED ...  :( ");
-    // }
-    // delay(100);
-
-    // Serial.println("Testing set_crop_vblk_vertical(15,-15)...");
-    // if (tvp.set_crop_vblk_vertical(15, -15))
-    // {
-    //     Serial.println("✓ vertical crop set up successfully!");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ verti crop set up failed .. wamp wamp");
-    // }
-    // delay(100);
-
-    // Serial.println("\nResetting crop registers...");
-    // if (tvp.reset_crop())
-    // {
-    //     Serial.println("✓ Registers reset successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ Failed to reset registers");
-    // }
-
-    // // Reset miscellaneous controls register
-    // Serial.println("\nResetting miscellaneous controls register...");
-    // if (tvp.reset_miscellaneous_controls_register())
-    // {
-    //     Serial.println("✓ Register reset successfully");
-    // }
-    // else
-    // {
-    //     Serial.println("✗ Failed to reset register");
-    // }
-
-    // Serial.println("\n=== Write Functions Test Complete ===\n");
+    vTaskDelay(pdMS_TO_TICKS(1000));
 }
