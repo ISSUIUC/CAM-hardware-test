@@ -377,13 +377,20 @@ esp_err_t uvc_device_init(void)
 
     // init device stack on configured roothub port
     usb_phy_init();
-    bool usb_init = tusb_init();
-    if (!usb_init)
+    if (!tusb_inited())
     {
-        ESP_LOGE(TAG, "USB Device Stack Init Fail");
-        vEventGroupDelete(s_uvc_device.event_group);
-        s_uvc_device.event_group = NULL;
-        return ESP_FAIL;
+        bool usb_init = tusb_init();
+        if (!usb_init)
+        {
+            ESP_LOGE(TAG, "USB Device Stack Init Fail");
+            vEventGroupDelete(s_uvc_device.event_group);
+            s_uvc_device.event_group = NULL;
+            return ESP_FAIL;
+        }
+    }
+    else
+    {
+        ESP_LOGE(TAG, "USB Device Stack Already Initialized, skipping...");
     }
 
     BaseType_t core_id = (CONFIG_UVC_TINYUSB_TASK_CORE < 0) ? tskNO_AFFINITY : CONFIG_UVC_TINYUSB_TASK_CORE;
