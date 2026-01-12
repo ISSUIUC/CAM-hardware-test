@@ -629,7 +629,7 @@ void setup()
 #endif
 
 #ifdef UVC_USB_DEVICE
-    uvc.init();
+    uvc.init(); // this basically starts the uvc device and the video transfer on another thread so we don't need to worry about it in void loop
 #endif
 
     // init_tasks();
@@ -637,9 +637,6 @@ void setup()
 
 void loop()
 {
-#ifdef UVC_USB_DEVICE
-// TODO
-#endif
 
     vTaskDelay(pdMS_TO_TICKS(1000));
 }
