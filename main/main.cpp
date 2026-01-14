@@ -49,7 +49,6 @@ const int LED_PIN = 22;
 // Threads go here!
 // Note: If you need to add a new thread, follow the example below & ALSO create an entry in init_tasks for the thread
 
-// Note frequencies (Hz) for Bad Piggies theme
 #define NOTE_C5  523
 #define NOTE_D5  587
 #define NOTE_DS5 622
@@ -68,7 +67,7 @@ void playNote(int pin, int frequency, int duration) {
     }
     vTaskDelay(pdMS_TO_TICKS(duration));
     noTone(pin);
-    vTaskDelay(pdMS_TO_TICKS(10)); // Small gap between notes
+    vTaskDelay(pdMS_TO_TICKS(10));
 }
 
 void task_buzzer(void* arg) {
@@ -82,11 +81,9 @@ void task_buzzer(void* arg) {
     vTaskDelay(pdMS_TO_TICKS(80));
     noTone(BUZZER_PIN);
 
-    // Now play startup song - Bad Piggies Theme (from MIDI)
     vTaskDelay(pdMS_TO_TICKS(200));
 
-    // Bad Piggies main theme melody
-    // First phrase
+    //first
     playNote(BUZZER_PIN, NOTE_C6, 400);
     playNote(BUZZER_PIN, NOTE_C6, 300);
 
@@ -106,7 +103,7 @@ void task_buzzer(void* arg) {
     vTaskDelay(pdMS_TO_TICKS(100));
     
 
-    // // Second phrase
+    //second
     playNote(BUZZER_PIN, NOTE_AS5, 400);
     playNote(BUZZER_PIN, NOTE_AS5, 300);
     playNote(BUZZER_PIN, NOTE_GS5, 80);
