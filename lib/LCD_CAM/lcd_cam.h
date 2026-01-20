@@ -25,8 +25,14 @@ class LCD_CAM_Module {
 
         
     public: 
-        
         LCD_CAM_Module();
+
+        // Camera Initilization 
+        bool start_camera();
+
+        // LCD_CAM_Controller Initilization 
+        esp_err_t enable_lcd_cam_controller();
+
 
         // Test
         uint32_t read_register_test(uint32_t reg);
@@ -46,6 +52,7 @@ class LCD_CAM_Module {
 
         // Setting GPIO Matrix
         esp_err_t cam_controller_configure_gpio_matrix();
+
     
 
 

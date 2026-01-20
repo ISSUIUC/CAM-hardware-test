@@ -1,9 +1,15 @@
 #include "uvc_device.h"
-#include "venc.h"
+
 
 extern SemaphoreHandle_t Sframe_rdy;
 extern uint8_t *rx_frame_buf;
 extern size_t received_frame_size;
+
+
+camera cam1(CAM1_ON_OFF);
+LCD_CAM_Module cam_ctrl;
+esp_cam_ctlr_handle_t cam_handle = NULL;
+
 
 // I don't know how this is calculated but it was in the C file
 #define UVC_MAX_FRAMESIZE_SIZE (60 * 1024)
@@ -17,11 +23,19 @@ static uvc_fb_t s_fb;
 // when the uvc device is opened
 static esp_err_t uvc_start_cb(uvc_format_t format, int width, int height, int rate, void *cb_ctx)
 {
-    (void)cb_ctx; // don't really know what this does but it's in the example code
+    (void)cb_ctx; // From what I've research it's just saying it's an unused parameter. 
 
     Serial.printf("UVC Start: format=%d, %dx%d @ %d fps\n", format, width, height, rate);
-    // can later implement starting functions here like starting encoder and camera :)
-    // Usually you would want to start the camera AFTER starting the uvc stuff.
+
+    // Start CAM1
+
+    cam1.enable_cam_power();
+
+    // Initialize CAM_Controller (sets configs, sets call backs)
+
+    cam_ctrl.enable_lcd_cam_controller();
+
+
 
     return ESP_OK;
 }

@@ -85,29 +85,12 @@ USBCDC USBSerial;
 // RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
 
 tvp5151 tvp(TVP5151_PDN, TVP5151_RESET, TVP5151_ADDR, &Wire);
-LCD_CAM_Module cam_ctrl;
+extern LCD_CAM_Module cam_ctrl;
 UVC_device uvc;
 
-// Frame signaling/buffers — give external linkage so other C++ files can reference them via `extern`
+
 SemaphoreHandle_t Sframe_rdy = NULL;
-uint8_t *rx_frame_buf = NULL;
-size_t received_frame_size = 0;
 
-static bool IRAM_ATTR dvp_trans_finished(esp_cam_ctlr_handle_t handle, esp_cam_ctlr_trans_t *trans, void *user_data)
-{
-    rx_frame_buf = (uint8_t *)trans->buffer;
-    received_frame_size = trans->received_size;
-
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    xSemaphoreGiveFromISR(Sframe_rdy, &xHigherPriorityTaskWoken);
-
-    return xHigherPriorityTaskWoken == pdTRUE;
-}
-
-static bool IRAM_ATTR dvp_get_new_trans(esp_cam_ctlr_handle_t handle, esp_cam_ctlr_trans_t *trans, void *user_data)
-{
-    return false;
-}
 
 #ifdef IS_CAM
 const int LED_PIN = 51;
@@ -116,6 +99,7 @@ const int LED_PIN = 51;
 #ifdef IS_EAGLE
 const int LED_PIN = 22;
 #endif
+
 
 // Threads go here!
 // Note: If you need to add a new thread, follow the example below & ALSO create an entry in init_tasks for the thread
@@ -217,168 +201,10 @@ void setup()
         };
     }
 
-#ifdef C_ENABLE_LCD_CAM_CONTROLLER
-
-    // test read register value Address: 0x0018
-    // expected output 0111110001111111100000000011011 or 3E3FC01B in hex
-
-    Serial.println("ENABLE LCD CAM Controller");
-
-    // Serial.println(cam_ctrl.read_register_test(0x0018), HEX); dosen't work CRASHES.
-
-    // Set up GPIO Matrix...
     Serial.println("Configure GPIO Matrix");
     cam_ctrl.cam_controller_configure_gpio_matrix(); // configure AVID, YOUT, HSYNC, VSYNC, PCLK pins // WORKS
     Serial.println("Configured");
 
-    esp_cam_ctlr_handle_t cam_handle = NULL; // initialize a handle which esp uses to store data in
-
-    // initialize LCD_CAM_Controller
-
-    // cam_ctrl.initialize_cam_ctrl(); // Can test Kacper's initialize if esp dosen't work
-
-    esp_cam_ctlr_dvp_pin_config pin_cfg{
-        .data_width = CAM_CTLR_DATA_WIDTH_8,
-        .data_io = {
-            GPIO_NUM_23,
-            GPIO_NUM_22,
-            GPIO_NUM_21,
-            GPIO_NUM_20,
-            GPIO_NUM_13,
-            GPIO_NUM_12,
-            GPIO_NUM_11,
-            GPIO_NUM_10,
-        },
-        .vsync_io = GPIO_NUM_46,
-        .de_io = GPIO_NUM_45,
-        .pclk_io = GPIO_NUM_2,
-        .xclk_io = GPIO_NUM_NC,
-    };
-
-    esp_cam_ctlr_dvp_config_t dvp_config;
-    dvp_config.ctlr_id = 0;
-    dvp_config.clk_src = CAM_CLK_SRC_DEFAULT;
-    dvp_config.h_res = 720;
-    dvp_config.v_res = 480;
-    dvp_config.input_data_color_type = CAM_CTLR_COLOR_YUV422;
-    dvp_config.cam_data_width = 8;
-
-    dvp_config.bit_swap_en = 0;
-    dvp_config.byte_swap_en = 0;
-    dvp_config.bk_buffer_dis = 0;   /*!< Disable backup buffer */
-    dvp_config.pin_dont_init = 0;   /*!< Let driver initialize DVP pins and enable clocks */
-    dvp_config.pic_format_jpeg = 0; /*!< Input picture format is JPEG, if set this flag and "input_data_color_type" will be ignored */
-    dvp_config.external_xtal = 1;
-
-    dvp_config.dma_burst_size = 128;
-    dvp_config.xclk_freq = 1;
-    dvp_config.pin = &pin_cfg;
-
-    Serial.println("Configure DVP Ctlr");
-
-    esp_err_t err;
-    err = esp_cam_new_dvp_ctlr(&dvp_config, &cam_handle);
-
-    if (err != ESP_OK)
-    {
-        Serial.print("(1) ERROR  0x");
-        Serial.println(err, HEX);
-        while (1)
-        {
-        };
-    }
-
-    esp_cam_ctlr_evt_cbs_t cbs = {
-        .on_get_new_trans = dvp_get_new_trans,
-        .on_trans_finished = dvp_trans_finished,
-    };
-
-    err = esp_cam_ctlr_register_event_callbacks(cam_handle, &cbs, NULL);
-
-    if (err != ESP_OK)
-    {
-        Serial.print("Callback registration ERROR 0x");
-        Serial.println(err, HEX);
-        while (1)
-        {
-        };
-    }
-
-    Serial.println("Callbacks registered");
-
-    // save internal buffer so on_trans_finished runs
-    const void *internal_buf = NULL;
-    err = esp_cam_ctlr_get_frame_buffer(cam_handle, 1, &internal_buf);
-    if (err != ESP_OK)
-    {
-        Serial.print("Get internal buffer ERROR 0x");
-        Serial.println(err, HEX);
-        while (1)
-        {
-        };
-    }
-
-    Serial.printf("Internal buffer @ 0x %p\n", internal_buf);
-
-#ifdef VIDEO_CONVERSION_YUV
-
-    const cam_ctlr_format_conv_config_t conv_cfg = {
-        .src_format = CAM_CTLR_COLOR_YUV422, // Source format: YUV422
-        .dst_format = CAM_CTLR_COLOR_YUV420, // Destination format: YUV420
-        .conv_std = COLOR_CONV_STD_RGB_YUV_BT601,
-        .data_width = 8,
-        .input_range = COLOR_RANGE_LIMIT,
-        .output_range = COLOR_RANGE_LIMIT,
-    };
-    ESP_ERROR_CHECK(esp_cam_ctlr_format_conversion(cam_handle, &conv_cfg));
-
-#endif
-
-    Serial.println("Enable CAM Ctlr");
-
-    esp_err_t err2;
-    err2 = esp_cam_ctlr_enable(cam_handle); // enable high peripheral // no work
-
-    if (err2 != ESP_OK)
-    {
-        Serial.print("(2) ERROR  0x");
-        Serial.println(err2, HEX);
-        while (1)
-        {
-        };
-    }
-
-    Serial.println("Start CAM Controller");
-
-    esp_err_t err3;
-    err3 = esp_cam_ctlr_start(cam_handle);
-
-    if (err3 != ESP_OK)
-    {
-        Serial.print("(3) ERROR  0x");
-        Serial.println(err3, HEX);
-        while (1)
-        {
-        };
-    }
-
-    Serial.print("CAM CONTROLLER START!");
-
-#endif
-
-#ifdef C_ENABLE_CAM_CONTROL
-    pinMode(CAM1_ON_OFF, OUTPUT);
-    pinMode(LED_RED, OUTPUT);
-    // Serial1.begin(9600, CAM)
-    digitalWrite(CAM1_ON_OFF, LOW);
-    digitalWrite(LED_RED, LOW);
-
-    digitalWrite(CAM1_ON_OFF, HIGH);
-    digitalWrite(LED_RED, HIGH);
-
-    Serial.println("cam on, waiting for video to stabilize");
-    delay(10000);
-#endif
 
 #ifdef C_ENABLE_TVP_DECODE
 
@@ -477,6 +303,13 @@ void setup()
     Serial.print("Color Subcarrier Locked: ");
     Serial.println(color_locked ? "YES" : "NO");
 
+
+    
+    #ifdef UVC_USB_DEVICE
+    uvc.init(); // this basically starts the uvc device and the video transfer on another thread so we don't need to worry about it in void loop
+    #endif
+
+
     // Wait until locked
     while (!vsync_locked || !hsync_locked || !color_locked)
     {
@@ -493,124 +326,122 @@ void setup()
         Serial.println(color_locked);
     }
 
+
 #endif
 
     delay(1000);
 
-#ifdef C_ENABLE_LCD_CAM_CONTROLLER
+// #ifdef C_ENABLE_LCD_CAM_CONTROLLER
 
-    Serial.println("Wait for frame...");
+//     Serial.println("Wait for frame...");
 
-    if (xSemaphoreTake(Sframe_rdy, pdMS_TO_TICKS(15000)))
-    {
-        Serial.printf("Frame received! Size: %u bytes\n", received_frame_size);
+//     if (xSemaphoreTake(Sframe_rdy, pdMS_TO_TICKS(15000)))
+//     {
+//         Serial.printf("Frame received! Size: %u bytes\n", received_frame_size);
 
-        // Use the received frame
-        esp_cam_ctlr_trans_t my_trans;
-        my_trans.buffer = rx_frame_buf;
-        my_trans.buflen = received_frame_size;
-        my_trans.received_size = received_frame_size;
+//         // Use the received frame
+//         esp_cam_ctlr_trans_t my_trans;
+//         my_trans.buffer = rx_frame_buf;
+//         my_trans.buflen = received_frame_size;
+//         my_trans.received_size = received_frame_size;
 
-        Serial.println("*FRAME");
-        delay(750);
-        on_frame_ready(&my_trans);
-        Serial.println("**DONE");
+//         Serial.println("*FRAME");
+//         delay(750);
+//         on_frame_ready(&my_trans);
+//         Serial.println("**DONE");
 
-#ifdef H264_ENCODER
-        Serial.println("Running H264 encode->decode test");
+// #ifdef H264_ENCODER
+//         Serial.println("Running H264 encode->decode test");
 
-        H264_ENC enc;
-        esp_h264_enc_cfg_t enc_cfg = enc.set_config_H264_enc_single(ESP_H264_RAW_FMT_O_UYY_E_VYY, CAMERA_FPS, FRAMESIZE_HEIGHT, FRAMESIZE_WIDTH, BITRATE, QMIN, QMAX, GOP);
-        esp_h264_err_t ret = enc.init_H264_enc_single(enc_cfg, HW);
-        if (ret != ESP_H264_ERR_OK)
-        {
-            Serial.println("ENC hardware init failed...trying software");
-            ret = enc.init_H264_enc_single(enc_cfg, SW);
-            if (ret != ESP_H264_ERR_OK)
-                Serial.println("software failed too...");
-        }
-        else
-        {
-            esp_cam_ctlr_trans_t my_trans;
-            my_trans.buffer = rx_frame_buf;
-            my_trans.buflen = received_frame_size;
-            my_trans.received_size = received_frame_size;
+//         H264_ENC enc;
+//         esp_h264_enc_cfg_t enc_cfg = enc.set_config_H264_enc_single(ESP_H264_RAW_FMT_O_UYY_E_VYY, CAMERA_FPS, FRAMESIZE_HEIGHT, FRAMESIZE_WIDTH, BITRATE, QMIN, QMAX, GOP);
+//         esp_h264_err_t ret = enc.init_H264_enc_single(enc_cfg, HW);
+//         if (ret != ESP_H264_ERR_OK)
+//         {
+//             Serial.println("ENC hardware init failed...trying software");
+//             ret = enc.init_H264_enc_single(enc_cfg, SW);
+//             if (ret != ESP_H264_ERR_OK)
+//                 Serial.println("software failed too...");
+//         }
+//         else
+//         {
+//             esp_cam_ctlr_trans_t my_trans;
+//             my_trans.buffer = rx_frame_buf;
+//             my_trans.buflen = received_frame_size;
+//             my_trans.received_size = received_frame_size;
 
-            esp_h264_enc_in_frame_t *in_frame = enc.get_inframe();
-            esp_h264_pkt_t packet;
-            packet.buffer = (uint8_t *)my_trans.buffer;
-            packet.len = my_trans.buflen;
-            in_frame->raw_data = packet;
-            in_frame->pts = (uint32_t)millis(); // TODO: idk how to set pts/if this is the right way... (might wanna look at esp_h264_enc_dual.cpp&.h)
-            esp_h264_err_t ret = enc.run_H264_enc_single();
+//             esp_h264_enc_in_frame_t *in_frame = enc.get_inframe();
+//             esp_h264_pkt_t packet;
+//             packet.buffer = (uint8_t *)my_trans.buffer;
+//             packet.len = my_trans.buflen;
+//             in_frame->raw_data = packet;
+//             in_frame->pts = (uint32_t)millis(); // TODO: idk how to set pts/if this is the right way... (might wanna look at esp_h264_enc_dual.cpp&.h)
+//             esp_h264_err_t ret = enc.run_H264_enc_single();
 
-            if (ret != ESP_H264_ERR_OK)
-            {
-                Serial.println("ENC process failed");
-            }
-            else
-            {
-                esp_h264_enc_out_frame_t *e_out_frame = enc.get_outframe();
-                uint32_t enc_pkt_len = e_out_frame->length;
-                uint8_t *enc_pkt = e_out_frame->raw_data.buffer;
-                uint32_t enc_dts = e_out_frame->dts; // need to look into this plz
-                uint32_t enc_pts = e_out_frame->pts; // need to look into this plz/i believe i can do this
+//             if (ret != ESP_H264_ERR_OK)
+//             {
+//                 Serial.println("ENC process failed");
+//             }
+//             else
+//             {
+//                 esp_h264_enc_out_frame_t *e_out_frame = enc.get_outframe();
+//                 uint32_t enc_pkt_len = e_out_frame->length;
+//                 uint8_t *enc_pkt = e_out_frame->raw_data.buffer;
+//                 uint32_t enc_dts = e_out_frame->dts; // need to look into this plz
+//                 uint32_t enc_pts = e_out_frame->pts; // need to look into this plz/i believe i can do this
 
-                Serial.print("Encoded bytes: ");
-                Serial.println((uint32_t)enc_pkt_len);
+//                 Serial.print("Encoded bytes: ");
+//                 Serial.println((uint32_t)enc_pkt_len);
 
-                enc.close_H264_enc_single();
+//                 enc.close_H264_enc_single();
 
-                Serial.println("Decoder time! Oh boi.");
-                H264_DEC dec;
-                esp_h264_enc_cfg_t dec_cfg = dec.set_config_H264_dec_single(ESP_H264_RAW_FMT_I420, CAMERA_FPS, FRAMESIZE_HEIGHT, FRAMESIZE_WIDTH, BITRATE, QMIN, QMAX, GOP);
-                if (dec.init_H264_dec_single(dec_cfg) != ESP_H264_ERR_OK)
-                {
-                    Serial.println("DEC init failed");
-                }
-                else
-                {
-                    esp_h264_dec_in_frame_t *in_frame = dec.get_inframe();
-                    // use the true length not the buffer's length might be a bad choice but we can go with it.
-                    in_frame->raw_data.buffer = enc_pkt;
-                    in_frame->raw_data.len = enc_pkt_len;
+//                 Serial.println("Decoder time! Oh boi.");
+//                 H264_DEC dec;
+//                 esp_h264_enc_cfg_t dec_cfg = dec.set_config_H264_dec_single(ESP_H264_RAW_FMT_I420, CAMERA_FPS, FRAMESIZE_HEIGHT, FRAMESIZE_WIDTH, BITRATE, QMIN, QMAX, GOP);
+//                 if (dec.init_H264_dec_single(dec_cfg) != ESP_H264_ERR_OK)
+//                 {
+//                     Serial.println("DEC init failed");
+//                 }
+//                 else
+//                 {
+//                     esp_h264_dec_in_frame_t *in_frame = dec.get_inframe();
+//                     // use the true length not the buffer's length might be a bad choice but we can go with it.
+//                     in_frame->raw_data.buffer = enc_pkt;
+//                     in_frame->raw_data.len = enc_pkt_len;
 
-                    // other option that we can use:
-                    // in_frame->raw_data = e_out_frame->raw_data;
+//                     // other option that we can use:
+//                     // in_frame->raw_data = e_out_frame->raw_data;
 
-                    in_frame->dts = enc_dts;
-                    in_frame->pts = enc_pts;
+//                     in_frame->dts = enc_dts;
+//                     in_frame->pts = enc_pts;
 
-                    Serial.println("Decoding while loop....");
-                    while (in_frame->raw_data.len)
-                    {
-                        esp_h264_err_t ret = dec.run_H264_dec_single();
-                        if (ret != ESP_H264_ERR_OK)
-                        {
-                            Serial.print("Error code: ");
-                            Serial.println(ret);
-                            break;
-                        }
-                        in_frame->raw_data.buffer += in_frame->consume;
-                        in_frame->raw_data.len -= in_frame->consume; // consume set by decoder as decoding happens
-                    }
+//                     Serial.println("Decoding while loop....");
+//                     while (in_frame->raw_data.len)
+//                     {
+//                         esp_h264_err_t ret = dec.run_H264_dec_single();
+//                         if (ret != ESP_H264_ERR_OK)
+//                         {
+//                             Serial.print("Error code: ");
+//                             Serial.println(ret);
+//                             break;
+//                         }
+//                         in_frame->raw_data.buffer += in_frame->consume;
+//                         in_frame->raw_data.len -= in_frame->consume; // consume set by decoder as decoding happens
+//                     }
 
-                    esp_h264_dec_out_frame_t *out_frame = dec.get_outframe();
-                    uint32_t out_yuv_len = out_frame->out_size;
+//                     esp_h264_dec_out_frame_t *out_frame = dec.get_outframe();
+//                     uint32_t out_yuv_len = out_frame->out_size;
 
-                    Serial.print("Decoded bytes: ");
-                    Serial.println((uint32_t)out_yuv_len);
+//                     Serial.print("Decoded bytes: ");
+//                     Serial.println((uint32_t)out_yuv_len);
 
-                    dec.close_H264_dec_single();
-                }
-            }
-        }
-#endif
-    }
-    else
-    {
-        Serial.println("Timeout waiting for frame (15s)");
-    }
+//                     dec.close_H264_dec_single();
+//                 }
+//             }
+//         }
+// #endif
+//     }
+
 
     // size_t frame_bytes = 720* 480 * 2;
     // esp_cam_ctlr_trans_t my_trans;
@@ -628,9 +459,7 @@ void setup()
 
 #endif
 
-#ifdef UVC_USB_DEVICE
-    uvc.init(); // this basically starts the uvc device and the video transfer on another thread so we don't need to worry about it in void loop
-#endif
+
 
     // init_tasks();
 }
