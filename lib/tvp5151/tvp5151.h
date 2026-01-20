@@ -1,5 +1,9 @@
+#pragma once
+
 #include <Wire.h>
 #include <Arduino.h>
+
+
 
 // Type defs
 enum CAM_SELECT

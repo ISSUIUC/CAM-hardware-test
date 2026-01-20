@@ -49,6 +49,15 @@ uint16_t tvp5151::read_device_id()
     return device_id;
 }
 
+
+void tvp5151::tvp_set_pins_output(){
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        pinMode(YOUT[i], INPUT);
+    }
+}
+
+
 bool tvp5151::source_select(CAM_SELECT CAM)
 {
 

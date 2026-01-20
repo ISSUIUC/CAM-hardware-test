@@ -4,12 +4,11 @@
 extern SemaphoreHandle_t Sframe_rdy;
 extern uint8_t *rx_frame_buf;
 extern size_t received_frame_size;
+extern esp_cam_ctlr_handle_t cam_handle; 
+extern LCD_CAM_Module cam_ctrl;
 
 
 camera cam1(CAM1_ON_OFF);
-LCD_CAM_Module cam_ctrl;
-esp_cam_ctlr_handle_t cam_handle = NULL;
-
 
 // I don't know how this is calculated but it was in the C file
 #define UVC_MAX_FRAMESIZE_SIZE (60 * 1024)
@@ -27,13 +26,18 @@ static esp_err_t uvc_start_cb(uvc_format_t format, int width, int height, int ra
 
     Serial.printf("UVC Start: format=%d, %dx%d @ %d fps\n", format, width, height, rate);
 
+
+    // Initialize CAM_Controller (sets configs, sets call backs) // must enable before powering on camera as it causes a hard reset. (thought: memory fault due to pins being wiggled < kacper: " What does this mean?")
+
+    cam_ctrl.enable_lcd_cam_controller();
+
     // Start CAM1
 
     cam1.enable_cam_power();
 
-    // Initialize CAM_Controller (sets configs, sets call backs)
+    // Wait for TVP5151 to lock onto video 
 
-    cam_ctrl.enable_lcd_cam_controller();
+
 
 
 
