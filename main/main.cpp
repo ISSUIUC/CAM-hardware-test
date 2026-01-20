@@ -88,10 +88,8 @@ tvp5151 tvp(TVP5151_PDN, TVP5151_RESET, TVP5151_ADDR, &Wire);
 LCD_CAM_Module cam_ctrl;
 UVC_device uvc;
 esp_cam_ctlr_handle_t cam_handle = NULL;
-
-
-
 SemaphoreHandle_t Sframe_rdy = NULL;
+
 
 
 #ifdef IS_CAM
@@ -123,47 +121,6 @@ void task_ex(void *arg)
 
     // Example task
     xTaskCreatePinnedToCore(task_ex, "example", 1024, nullptr, 0, nullptr, CORE_0);
-}
-
-static bool sent_once = false;
-
-void on_frame_ready(const esp_cam_ctlr_trans_t *trans)
-{
-    if (sent_once)
-    { // so that the function only sends one frame
-        return;
-    }
-    sent_once = true;
-
-    uint32_t off = 0;
-    uint32_t magic = 0x314D4143;                   // "CAM1"
-    uint32_t len = (uint32_t)trans->received_size; // length
-    uint8_t *buf = (uint8_t *)trans->buffer;
-
-    while (off < len)
-    { // making sure we don't overload usb write and instead send in chunks
-        uint32_t chunk = len - off;
-
-        if (chunk > 512)
-            chunk = 512;
-
-        // Serial.println("Writing Chunk");
-        size_t wrote = Serial.write(buf + off, chunk);
-        Serial.flush();
-        vTaskDelay(pdMS_TO_TICKS(1));
-        // Serial.println("PRINTED Chunk");
-
-        off += chunk;
-
-        if (wrote == 0)
-        { // if nothing was written wait for USB to finish.
-            Serial.println("Nothing was written, USB FULL");
-            vTaskDelay(pdMS_TO_TICKS(1));
-        }
-    }
-
-    Serial.println();
-    Serial.println(len);
 }
 
 void setup()
@@ -204,7 +161,9 @@ void setup()
     }
 
     Serial.println("Configure GPIO Matrix");
+
     cam_ctrl.cam_controller_configure_gpio_matrix(); // configure AVID, YOUT, HSYNC, VSYNC, PCLK pins // WORKS
+   
     Serial.println("Configured");
 
 
@@ -312,23 +271,6 @@ void setup()
     #endif
 
 
-    // Wait until locked
-    while (!vsync_locked || !hsync_locked || !color_locked)
-    {
-        Serial.println("Waiting for TVP to lock...");
-
-        vsync_locked = tvp.read_vertical_sync_lock_status();
-        hsync_locked = tvp.read_horizontal_sync_lock_status();
-        color_locked = tvp.read_color_subcarrier_lock_status();
-        Serial.print("VSYNC: ");
-        Serial.print(vsync_locked);
-        Serial.print(", HSYNC: ");
-        Serial.print(hsync_locked);
-        Serial.print(", COL: ");
-        Serial.println(color_locked);
-    }
-
-
 #endif
 
     delay(1000);
@@ -339,3 +281,72 @@ void loop()
 
     vTaskDelay(pdMS_TO_TICKS(1000));
 }
+
+
+
+
+
+
+
+
+
+
+// Test Code 
+
+    // // Wait until locked
+    // while (!vsync_locked || !hsync_locked || !color_locked)
+    // {
+    //     Serial.println("Waiting for TVP to lock...");
+
+    //     vsync_locked = tvp.read_vertical_sync_lock_status();
+    //     hsync_locked = tvp.read_horizontal_sync_lock_status();
+    //     color_locked = tvp.read_color_subcarrier_lock_status();
+    //     Serial.print("VSYNC: ");
+    //     Serial.print(vsync_locked);
+    //     Serial.print(", HSYNC: ");
+    //     Serial.print(hsync_locked);
+    //     Serial.print(", COL: ");
+    //     Serial.println(color_locked);
+    // }
+
+
+// static bool sent_once = false;
+
+// void on_frame_ready(const esp_cam_ctlr_trans_t *trans)
+// {
+//     if (sent_once)
+//     { // so that the function only sends one frame
+//         return;
+//     }
+//     sent_once = true;
+
+//     uint32_t off = 0;
+//     uint32_t magic = 0x314D4143;                   // "CAM1"
+//     uint32_t len = (uint32_t)trans->received_size; // length
+//     uint8_t *buf = (uint8_t *)trans->buffer;
+
+//     while (off < len)
+//     { // making sure we don't overload usb write and instead send in chunks
+//         uint32_t chunk = len - off;
+
+//         if (chunk > 512)
+//             chunk = 512;
+
+//         // Serial.println("Writing Chunk");
+//         size_t wrote = Serial.write(buf + off, chunk);
+//         Serial.flush();
+//         vTaskDelay(pdMS_TO_TICKS(1));
+//         // Serial.println("PRINTED Chunk");
+
+//         off += chunk;
+
+//         if (wrote == 0)
+//         { // if nothing was written wait for USB to finish.
+//             Serial.println("Nothing was written, USB FULL");
+//             vTaskDelay(pdMS_TO_TICKS(1));
+//         }
+//     }
+
+//     Serial.println();
+//     Serial.println(len);
+// }

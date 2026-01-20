@@ -107,6 +107,9 @@ private:
     uint8_t _i2c_addr;
     uint8_t _pdn;
     uint8_t _reset;
+    bool vsync_locked = false;
+    bool hsync_locked = false;
+    bool color_locked = false;
 
 public:
     tvp5151(uint8_t pdn, uint8_t reset, uint8_t i2c_addr, TwoWire *i2c);
@@ -160,6 +163,7 @@ public:
     bool read_vertical_sync_lock_status();
     bool read_horizontal_sync_lock_status();
     bool read_peak_white_detect_status();
+    bool tvp_wait_for_lock();
     bool read_lock_state_interrupt();
     bool read_vcr_mode();
     bool read_lost_lock_status();

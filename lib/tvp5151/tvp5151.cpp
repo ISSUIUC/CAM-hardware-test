@@ -6,6 +6,9 @@ tvp5151::tvp5151(uint8_t pdn, uint8_t reset, uint8_t addr, TwoWire *i2c)
     _i2c = i2c;
     _pdn = pdn;
     _reset = reset;
+    vsync_locked = false;
+    hsync_locked = false;
+    color_locked = false;
 }
 
 bool tvp5151::init()
@@ -47,14 +50,6 @@ uint16_t tvp5151::read_device_id()
     uint16_t device_id = (id_msb << 8) + id_lsb;
 
     return device_id;
-}
-
-
-void tvp5151::tvp_set_pins_output(){
-    for (uint8_t i = 0; i < 8; i++)
-    {
-        pinMode(YOUT[i], INPUT);
-    }
 }
 
 
@@ -147,6 +142,28 @@ bool tvp5151::read_horizontal_sync_lock_status()
 {
     return register_bit_tvp_i2c_result_to_bool(read_register_bit(TVP_REG_STATUS_ONE, 0x02), "read_horizontal_sync_lock_status");
 }
+
+
+bool tvp5151::tvp_wait_for_lock(){
+    while (!vsync_locked || !hsync_locked || !color_locked)
+    {
+        // Serial.println("Waiting for TVP to lock...");
+
+        vsync_locked = read_vertical_sync_lock_status();
+        hsync_locked = read_horizontal_sync_lock_status();
+        color_locked = read_color_subcarrier_lock_status();
+
+        // Serial.print("VSYNC: ");
+        // Serial.print(vsync_locked);
+        // Serial.print(", HSYNC: ");
+        // Serial.print(hsync_locked);
+        // Serial.print(", COL: ");
+        // Serial.println(color_locked);
+    }
+}
+
+
+
 
 /*
 3.21.48 Status Register #1 | Bit 3 (Page 54)
