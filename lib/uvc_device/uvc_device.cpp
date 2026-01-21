@@ -26,7 +26,6 @@ static esp_err_t uvc_start_cb(uvc_format_t format, int width, int height, int ra
 
     Serial.printf("UVC Start: format=%d, %dx%d @ %d fps\n", format, width, height, rate);
 
-
     // Initialize CAM_Controller (sets configs, sets call backs) // must enable before powering on camera as it causes a hard reset. (thought: memory fault due to pins being wiggled < kacper: " What does this mean?")
 
     cam_ctrl.enable_lcd_cam_controller();

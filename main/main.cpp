@@ -33,50 +33,11 @@ USBCDC USBSerial;
 // #define C_ENABLE_BUZZER
 
 // #define C_ENABLE_TVP_DECODE
-
-// #define CAM2_Select
-
 //------------------------------------------------
-
-// Video Test Pipeline #1 || TVP5151 Setup:
-
-// TVP5151 Setup + Camera Init
 
 #define C_ENABLE_CAM_CONTROL
 #define CAM2_Select // RunCam is on AIP1B, not AIP1A
 #define C_ENABLE_TVP_DECODE
-
-// Video Test Pipeline #2 || TVP5151 Setup + CAM_Controller Initization + Output YUV422 || One FRAME
-
-// TVP5151 Setup + Camera Init
-
-// #define C_ENABLE_CAM_CONTROL
-// #define CAM1_Select
-// #define C_ENABLE_TVP_DECODE
-
-// Set-up GPIO Matrix of ESP32 P4 || Initialize CAM Controller using esp driver
-
-#define C_ENABLE_LCD_CAM_CONTROLLER
-
-// Video Test Pipeline #3
-// TVP5151 Setup + CAM_Controller Initization + Format Conversion YUV422 > YUV420 > USB-C
-
-// #define C_ENABLE_CAM_CONTROL
-// #define CAM1_Select
-// #define C_ENABLE_TVP_DECODE
-
-// #define C_ENABLE_LCD_CAM_CONTROLLER
-
-// Convert Video Format from YUV422 to YUV420
-
-#define VIDEO_CONVERSION_YUV
-
-// H264 encoder
-
-#define H264_ENCODER
-
-// UVC device enabling
-
 #define UVC_USB_DEVICE
 
 //---------------------------
@@ -291,62 +252,3 @@ void loop()
 
 
 
-// Test Code 
-
-    // // Wait until locked
-    // while (!vsync_locked || !hsync_locked || !color_locked)
-    // {
-    //     Serial.println("Waiting for TVP to lock...");
-
-    //     vsync_locked = tvp.read_vertical_sync_lock_status();
-    //     hsync_locked = tvp.read_horizontal_sync_lock_status();
-    //     color_locked = tvp.read_color_subcarrier_lock_status();
-    //     Serial.print("VSYNC: ");
-    //     Serial.print(vsync_locked);
-    //     Serial.print(", HSYNC: ");
-    //     Serial.print(hsync_locked);
-    //     Serial.print(", COL: ");
-    //     Serial.println(color_locked);
-    // }
-
-
-// static bool sent_once = false;
-
-// void on_frame_ready(const esp_cam_ctlr_trans_t *trans)
-// {
-//     if (sent_once)
-//     { // so that the function only sends one frame
-//         return;
-//     }
-//     sent_once = true;
-
-//     uint32_t off = 0;
-//     uint32_t magic = 0x314D4143;                   // "CAM1"
-//     uint32_t len = (uint32_t)trans->received_size; // length
-//     uint8_t *buf = (uint8_t *)trans->buffer;
-
-//     while (off < len)
-//     { // making sure we don't overload usb write and instead send in chunks
-//         uint32_t chunk = len - off;
-
-//         if (chunk > 512)
-//             chunk = 512;
-
-//         // Serial.println("Writing Chunk");
-//         size_t wrote = Serial.write(buf + off, chunk);
-//         Serial.flush();
-//         vTaskDelay(pdMS_TO_TICKS(1));
-//         // Serial.println("PRINTED Chunk");
-
-//         off += chunk;
-
-//         if (wrote == 0)
-//         { // if nothing was written wait for USB to finish.
-//             Serial.println("Nothing was written, USB FULL");
-//             vTaskDelay(pdMS_TO_TICKS(1));
-//         }
-//     }
-
-//     Serial.println();
-//     Serial.println(len);
-// }
