@@ -7,3 +7,7 @@ managed_components
 ecf.py
 decf.py
 out.*
+
+out_*.*
+parse*.py
+read.py

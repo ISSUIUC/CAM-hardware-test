@@ -15,12 +15,10 @@ USBCDC USBSerial;
 #include <RHSoftwareSPI.h>
 #include <RHHardwareSPI.h>
 #include <tvp5151.h>
-#include <lcd_cam.h> // kacper's code used for setting GPIO Matrix, can test initialize CAM Controller if esp_cam_ctlr doesn't work
-#include <esp_cam_ctlr.h> // esp code for cam controller
+#include <lcd_cam.h>            // kacper's code used for setting GPIO Matrix, can test initialize CAM Controller if esp_cam_ctlr doesn't work
+#include <esp_cam_ctlr.h>       // esp code for cam controller
 #include "esp_cam_ctlr_types.h" // for defining transaction type
 #include "esp_cam_ctlr_dvp.h"
-
-
 
 #include "esp_h264_enc_single.h"
 
@@ -33,51 +31,42 @@ USBCDC USBSerial;
 
 // #define CAM2_Select
 
-
-
 // Video Test Pipeline #1 || TVP5151 Setup:
 
-    // TVP5151 Setup + Camera Init
+// TVP5151 Setup + Camera Init
 
 #define C_ENABLE_CAM_CONTROL
-#define CAM2_Select  // RunCam is on AIP1B, not AIP1A
+#define CAM2_Select // RunCam is on AIP1B, not AIP1A
 #define C_ENABLE_TVP_DECODE
-
 
 // Video Test Pipeline #2 || TVP5151 Setup + CAM_Controller Initization + Output YUV422 || One FRAME
 
-    // TVP5151 Setup + Camera Init
+// TVP5151 Setup + Camera Init
 
 // #define C_ENABLE_CAM_CONTROL
 // #define CAM1_Select
 // #define C_ENABLE_TVP_DECODE
 
-
-    // Set-up GPIO Matrix of ESP32 P4 || Initialize CAM Controller using esp driver
+// Set-up GPIO Matrix of ESP32 P4 || Initialize CAM Controller using esp driver
 
 #define C_ENABLE_LCD_CAM_CONTROLLER
 
-
-
-
-
 // Video Test Pipeline #3
-    // TVP5151 Setup + CAM_Controller Initization + Format Conversion YUV422 > YUV420 > USB-C
+// TVP5151 Setup + CAM_Controller Initization + Format Conversion YUV422 > YUV420 > USB-C
 
-    // TVP5151 Setup + Camera Init
+// TVP5151 Setup + Camera Init
 
 // #define C_ENABLE_CAM_CONTROL
 // #define CAM1_Select
 // #define C_ENABLE_TVP_DECODE
 
-    // Set-up GPIO Matrix of ESP32 P4 || Initialize CAM Controller using esp driver
+// Set-up GPIO Matrix of ESP32 P4 || Initialize CAM Controller using esp driver
 
 // #define C_ENABLE_LCD_CAM_CONTROLLER
 
-    // Convert Video Format from YUV422 to YUV420
+// Convert Video Format from YUV422 to YUV420
 
 #define VIDEO_CONVERSION_YUV
-
 
 // RHSoftwareSPI _rspi;
 // RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
@@ -86,11 +75,12 @@ tvp5151 tvp(TVP5151_PDN, TVP5151_RESET, TVP5151_ADDR, &Wire);
 LCD_CAM_Module cam_ctrl;
 
 static SemaphoreHandle_t Sframe_rdy = NULL;
-static uint8_t* rx_frame_buf = NULL;
+static uint8_t *rx_frame_buf = NULL;
 static size_t received_frame_size = 0;
 
-static bool IRAM_ATTR dvp_trans_finished(esp_cam_ctlr_handle_t handle, esp_cam_ctlr_trans_t *trans, void *user_data) {
-    rx_frame_buf = (uint8_t*)trans->buffer;
+static bool IRAM_ATTR dvp_trans_finished(esp_cam_ctlr_handle_t handle, esp_cam_ctlr_trans_t *trans, void *user_data)
+{
+    rx_frame_buf = (uint8_t *)trans->buffer;
     received_frame_size = trans->received_size;
 
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -99,10 +89,10 @@ static bool IRAM_ATTR dvp_trans_finished(esp_cam_ctlr_handle_t handle, esp_cam_c
     return xHigherPriorityTaskWoken == pdTRUE;
 }
 
-static bool IRAM_ATTR dvp_get_new_trans(esp_cam_ctlr_handle_t handle, esp_cam_ctlr_trans_t *trans, void *user_data) {
+static bool IRAM_ATTR dvp_get_new_trans(esp_cam_ctlr_handle_t handle, esp_cam_ctlr_trans_t *trans, void *user_data)
+{
     return false;
 }
-
 
 #ifdef IS_CAM
 const int LED_PIN = 51;
@@ -131,34 +121,38 @@ void task_ex(void *arg)
     xTaskCreatePinnedToCore(task_ex, "example", 1024, nullptr, 0, nullptr, CORE_0);
 }
 
-
 static bool sent_once = false;
 
-void on_frame_ready(const esp_cam_ctlr_trans_t *trans){
-    if(sent_once){ // so that the function only sends one frame
+void on_frame_ready(const esp_cam_ctlr_trans_t *trans)
+{
+    if (sent_once)
+    { // so that the function only sends one frame
         return;
     }
     sent_once = true;
 
     uint32_t off = 0;
-    uint32_t magic = 0x314D4143; // "CAM1"
+    uint32_t magic = 0x314D4143;                   // "CAM1"
     uint32_t len = (uint32_t)trans->received_size; // length
-    uint8_t *buf = (uint8_t*)trans->buffer;
+    uint8_t *buf = (uint8_t *)trans->buffer;
 
-    while(off<len){ // making sure we don't overload usb write and instead send in chunks
+    while (off < len)
+    { // making sure we don't overload usb write and instead send in chunks
         uint32_t chunk = len - off;
 
-        if(chunk>512) chunk = 512;
+        if (chunk > 512)
+            chunk = 512;
 
         // Serial.println("Writing Chunk");
-        size_t wrote = Serial.write(buf+off, chunk);
+        size_t wrote = Serial.write(buf + off, chunk);
         Serial.flush();
         vTaskDelay(pdMS_TO_TICKS(1));
         // Serial.println("PRINTED Chunk");
 
         off += chunk;
 
-        if(wrote == 0){ // if nothing was written wait for USB to finish.
+        if (wrote == 0)
+        { // if nothing was written wait for USB to finish.
             Serial.println("Nothing was written, USB FULL");
             vTaskDelay(pdMS_TO_TICKS(1));
         }
@@ -167,8 +161,6 @@ void on_frame_ready(const esp_cam_ctlr_trans_t *trans){
     Serial.println();
     Serial.println(len);
 }
-
-
 
 void setup()
 {
@@ -199,9 +191,12 @@ void setup()
     Serial.println("Cam dvp controller init");
 
     Sframe_rdy = xSemaphoreCreateBinary();
-    if (!Sframe_rdy) {
+    if (!Sframe_rdy)
+    {
         Serial.println("Failed to create frame semaphore");
-        while(1) {};
+        while (1)
+        {
+        };
     }
 
 #ifdef C_ENABLE_LCD_CAM_CONTROLLER
@@ -220,12 +215,11 @@ void setup()
 
     esp_cam_ctlr_handle_t cam_handle = NULL; // initialize a handle which esp uses to store data in
 
-
     // initialize LCD_CAM_Controller
 
     // cam_ctrl.initialize_cam_ctrl(); // Can test Kacper's initialize if esp dosen't work
 
-    esp_cam_ctlr_dvp_pin_config pin_cfg {
+    esp_cam_ctlr_dvp_pin_config pin_cfg{
         .data_width = CAM_CTLR_DATA_WIDTH_8,
         .data_io = {
             GPIO_NUM_23,
@@ -253,9 +247,9 @@ void setup()
 
     dvp_config.bit_swap_en = 0;
     dvp_config.byte_swap_en = 0;
-    dvp_config.bk_buffer_dis = 0;           /*!< Disable backup buffer */
-    dvp_config.pin_dont_init = 0;           /*!< Let driver initialize DVP pins and enable clocks */
-    dvp_config.pic_format_jpeg = 0;          /*!< Input picture format is JPEG, if set this flag and "input_data_color_type" will be ignored */
+    dvp_config.bk_buffer_dis = 0;   /*!< Disable backup buffer */
+    dvp_config.pin_dont_init = 0;   /*!< Let driver initialize DVP pins and enable clocks */
+    dvp_config.pic_format_jpeg = 0; /*!< Input picture format is JPEG, if set this flag and "input_data_color_type" will be ignored */
     dvp_config.external_xtal = 1;
 
     dvp_config.dma_burst_size = 128;
@@ -267,10 +261,13 @@ void setup()
     esp_err_t err;
     err = esp_cam_new_dvp_ctlr(&dvp_config, &cam_handle);
 
-    if(err!=ESP_OK){
+    if (err != ESP_OK)
+    {
         Serial.print("(1) ERROR  0x");
         Serial.println(err, HEX);
-        while(1) {};
+        while (1)
+        {
+        };
     }
 
     esp_cam_ctlr_evt_cbs_t cbs = {
@@ -280,64 +277,72 @@ void setup()
 
     err = esp_cam_ctlr_register_event_callbacks(cam_handle, &cbs, NULL);
 
-    if(err != ESP_OK){
+    if (err != ESP_OK)
+    {
         Serial.print("Callback registration ERROR 0x");
         Serial.println(err, HEX);
-        while(1) {};
+        while (1)
+        {
+        };
     }
 
     Serial.println("Callbacks registered");
 
     // save internal buffer so on_trans_finished runs
-    const void* internal_buf = NULL;
+    const void *internal_buf = NULL;
     err = esp_cam_ctlr_get_frame_buffer(cam_handle, 1, &internal_buf);
-    if(err != ESP_OK){
+    if (err != ESP_OK)
+    {
         Serial.print("Get internal buffer ERROR 0x");
         Serial.println(err, HEX);
-        while(1) {};
+        while (1)
+        {
+        };
     }
 
     Serial.printf("Internal buffer @ 0x %p\n", internal_buf);
 
-    #ifdef VIDEO_CONVERSION_YUV
+#ifdef VIDEO_CONVERSION_YUV
 
-        const cam_ctlr_format_conv_config_t conv_cfg = {
-        .src_format = CAM_CTLR_COLOR_YUV422,      // Source format: YUV422
-        .dst_format = CAM_CTLR_COLOR_YUV420,      // Destination format: YUV420
+    const cam_ctlr_format_conv_config_t conv_cfg = {
+        .src_format = CAM_CTLR_COLOR_YUV422, // Source format: YUV422
+        .dst_format = CAM_CTLR_COLOR_YUV420, // Destination format: YUV420
         .conv_std = COLOR_CONV_STD_RGB_YUV_BT601,
         .data_width = 8,
         .input_range = COLOR_RANGE_LIMIT,
         .output_range = COLOR_RANGE_LIMIT,
-        };
-        ESP_ERROR_CHECK(esp_cam_ctlr_format_conversion(cam_handle, &conv_cfg));
+    };
+    ESP_ERROR_CHECK(esp_cam_ctlr_format_conversion(cam_handle, &conv_cfg));
 
-    #endif
+#endif
 
     Serial.println("Enable CAM Ctlr");
-
 
     esp_err_t err2;
     err2 = esp_cam_ctlr_enable(cam_handle); // enable high peripheral // no work
 
-    if(err2!=ESP_OK){
+    if (err2 != ESP_OK)
+    {
         Serial.print("(2) ERROR  0x");
         Serial.println(err2, HEX);
-        while(1) {};
+        while (1)
+        {
+        };
     }
-
 
     Serial.println("Start CAM Controller");
 
     esp_err_t err3;
-    err3 = esp_cam_ctlr_start(cam_handle); 
+    err3 = esp_cam_ctlr_start(cam_handle);
 
-    if(err3!=ESP_OK){
+    if (err3 != ESP_OK)
+    {
         Serial.print("(3) ERROR  0x");
         Serial.println(err3, HEX);
-        while(1) {};
+        while (1)
+        {
+        };
     }
-
-
 
     Serial.print("CAM CONTROLLER START!");
 
@@ -356,7 +361,6 @@ void setup()
     Serial.println("cam on, waiting for video to stabilize");
     delay(10000);
 #endif
-
 
 #ifdef C_ENABLE_TVP_DECODE
 
@@ -379,7 +383,9 @@ void setup()
     if (!tvp.source_select(CAM1))
     {
         Serial.println("CAM 1 failed to select.");
-        while (1) {};
+        while (1)
+        {
+        };
     }
     Serial.println("CAM1 Success Select");
 #endif
@@ -388,32 +394,46 @@ void setup()
     if (!tvp.source_select(CAM2))
     {
         Serial.println("CAM 2 failed to select.");
-        while (1) {};
+        while (1)
+        {
+        };
     }
     Serial.println("CAM2 Success Select");
 #endif
 
-    if(!tvp.set_ycbcr_output_enable(true)){
+    if (!tvp.set_ycbcr_output_enable(true))
+    {
         Serial.println("TVP failed to enable output data.");
-        while (1) {};
+        while (1)
+        {
+        };
     }
     Serial.println("TVP Output Data Success.");
 
-    if(!tvp.set_clock_output_enable(true)){
+    if (!tvp.set_clock_output_enable(true))
+    {
         Serial.println("TVP failed to enable sclk.");
-        while (1) {};
+        while (1)
+        {
+        };
     }
     Serial.println("TVP enable sclk Setup Success.");
 
-    if(!tvp.set_avid_output_enable(true)){
+    if (!tvp.set_avid_output_enable(true))
+    {
         Serial.println("TVP failed to enable AVID output.");
-        while (1) {};
+        while (1)
+        {
+        };
     }
     Serial.println("TVP AVID Output Enabled.");
 
-    if(!tvp.set_yCbCr_output_format(true)){
+    if (!tvp.set_yCbCr_output_format(true))
+    {
         Serial.println("TVP failed to enable output format 4:2:2");
-        while (1) {};
+        while (1)
+        {
+        };
     }
     Serial.println("TVP enable YCbCr Output Format Setup Success.");
 
@@ -421,7 +441,6 @@ void setup()
     uint16_t device_id = tvp.read_device_id();
     Serial.print("Device ID: 0x");
     Serial.println(device_id, HEX);
-
 
     // Check vertical line count - if this shows ~525 for NTSC, video IS being processed
     uint16_t line_count = tvp.read_vertical_line_count();
@@ -441,7 +460,8 @@ void setup()
     Serial.println(color_locked ? "YES" : "NO");
 
     // Wait until locked
-    while (!vsync_locked || !hsync_locked || !color_locked) {
+    while (!vsync_locked || !hsync_locked || !color_locked)
+    {
         Serial.println("Waiting for TVP to lock...");
 
         vsync_locked = tvp.read_vertical_sync_lock_status();
@@ -455,16 +475,16 @@ void setup()
         Serial.println(color_locked);
     }
 
-
 #endif
 
     delay(1000);
 
-    #ifdef C_ENABLE_LCD_CAM_CONTROLLER
+#ifdef C_ENABLE_LCD_CAM_CONTROLLER
 
     Serial.println("Wait for frame...");
 
-    if (xSemaphoreTake(Sframe_rdy, pdMS_TO_TICKS(10000))) {
+    if (xSemaphoreTake(Sframe_rdy, pdMS_TO_TICKS(10000)))
+    {
         Serial.printf("Frame received! Size: %u bytes\n", received_frame_size);
 
         // Use the received frame
@@ -477,8 +497,9 @@ void setup()
         delay(750);
         on_frame_ready(&my_trans);
         Serial.println("**DONE");
-
-    } else {
+    }
+    else
+    {
         Serial.println("Timeout waiting for frame (10s)");
     }
 
@@ -496,12 +517,12 @@ void setup()
     // }
     // Serial.println("Received Frame");
 
-    #endif
+#endif
 
     // init_tasks();
 }
 
-
-void loop() {
+void loop()
+{
     vTaskDelay(pdMS_TO_TICKS(1000));
 }
