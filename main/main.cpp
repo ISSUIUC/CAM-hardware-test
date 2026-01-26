@@ -246,7 +246,7 @@ void setup()
     dvp_config.cam_data_width = 8;
 
     dvp_config.bit_swap_en = 0;
-    dvp_config.byte_swap_en = 0;
+    dvp_config.byte_swap_en = 1;
     dvp_config.bk_buffer_dis = 0;   /*!< Disable backup buffer */
     dvp_config.pin_dont_init = 0;   /*!< Let driver initialize DVP pins and enable clocks */
     dvp_config.pic_format_jpeg = 0; /*!< Input picture format is JPEG, if set this flag and "input_data_color_type" will be ignored */
