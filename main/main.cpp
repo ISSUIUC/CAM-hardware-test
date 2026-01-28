@@ -19,8 +19,10 @@ USBCDC USBSerial;
 #include <esp_cam_ctlr.h>       // esp code for cam controller
 #include "esp_cam_ctlr_types.h" // for defining transaction type
 #include "esp_cam_ctlr_dvp.h"
-
 #include "esp_h264_enc_single.h"
+#include "venc.h"
+#include "h264_io.h"
+
 
 #define CORE_0 0
 #define CORE_1 1
@@ -38,6 +40,8 @@ USBCDC USBSerial;
 #define C_ENABLE_CAM_CONTROL
 #define CAM2_Select // RunCam is on AIP1B, not AIP1A
 #define C_ENABLE_TVP_DECODE
+
+#define H264_ENCODER
 
 // Video Test Pipeline #2 || TVP5151 Setup + CAM_Controller Initization + Output YUV422 || One FRAME
 
@@ -66,7 +70,7 @@ USBCDC USBSerial;
 
 // Convert Video Format from YUV422 to YUV420
 
-#define VIDEO_CONVERSION_YUV
+// #define VIDEO_CONVERSION_YUV
 
 // RHSoftwareSPI _rspi;
 // RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
@@ -124,6 +128,45 @@ void task_ex(void *arg)
 static bool sent_once = false;
 
 void on_frame_ready(const esp_cam_ctlr_trans_t *trans)
+{
+    if (sent_once)
+    { // so that the function only sends one frame
+        return;
+    }
+    sent_once = true;
+
+    uint32_t off = 0;
+    uint32_t magic = 0x314D4143;                   // "CAM1"
+    uint32_t len = (uint32_t)trans->received_size; // length
+    uint8_t *buf = (uint8_t *)trans->buffer;
+
+    while (off < len)
+    { // making sure we don't overload usb write and instead send in chunks
+        uint32_t chunk = len - off;
+
+        if (chunk > 512)
+            chunk = 512;
+
+        // Serial.println("Writing Chunk");
+        size_t wrote = Serial.write(buf + off, chunk);
+        Serial.flush();
+        vTaskDelay(pdMS_TO_TICKS(1));
+        // Serial.println("PRINTED Chunk");
+
+        off += chunk;
+
+        if (wrote == 0)
+        { // if nothing was written wait for USB to finish.
+            Serial.println("Nothing was written, USB FULL");
+            vTaskDelay(pdMS_TO_TICKS(1));
+        }
+    }
+
+    Serial.println();
+    Serial.println(len);
+}
+
+void on_frame_ready(const )
 {
     if (sent_once)
     { // so that the function only sends one frame
@@ -246,7 +289,7 @@ void setup()
     dvp_config.cam_data_width = 8;
 
     dvp_config.bit_swap_en = 0;
-    dvp_config.byte_swap_en = 1;
+    dvp_config.byte_swap_en = 0;
     dvp_config.bk_buffer_dis = 0;   /*!< Disable backup buffer */
     dvp_config.pin_dont_init = 0;   /*!< Let driver initialize DVP pins and enable clocks */
     dvp_config.pic_format_jpeg = 0; /*!< Input picture format is JPEG, if set this flag and "input_data_color_type" will be ignored */
@@ -495,6 +538,101 @@ void setup()
 
         Serial.println("*FRAME");
         delay(750);
+
+
+#ifdef H264_ENCODER
+
+        Serial.println("Running H264 encode->decode test");
+
+        H264_ENC enc;
+
+        esp_h264_enc_cfg_t enc_cfg = enc.set_config_H264_enc_single(ESP_H264_RAW_FMT_O_UYY_E_VYY, CAMERA_FPS, FRAMESIZE_HEIGHT, FRAMESIZE_WIDTH, BITRATE, QMIN, QMAX, GOP);
+        esp_h264_err_t ret = enc.init_H264_enc_single(enc_cfg, HW);
+        if (ret != ESP_H264_ERR_OK)
+        {
+            Serial.println("ENC hardware init failed...trying software");
+            ret = enc.init_H264_enc_single(enc_cfg, SW);
+            if (ret != ESP_H264_ERR_OK)
+                Serial.println("software failed too...");
+        }
+        else
+        {
+            esp_cam_ctlr_trans_t my_trans;
+            my_trans.buffer = rx_frame_buf;
+            my_trans.buflen = received_frame_size;
+            my_trans.received_size = received_frame_size;
+
+            esp_h264_enc_in_frame_t *in_frame = enc.get_inframe();
+            esp_h264_pkt_t packet;
+            packet.buffer = (uint8_t *)my_trans.buffer;
+            packet.len = my_trans.buflen;
+            in_frame->raw_data = packet;
+            in_frame->pts = (uint32_t)millis(); // TODO: idk how to set pts/if this is the right way... (might wanna look at esp_h264_enc_dual.cpp&.h)
+            esp_h264_err_t ret = enc.run_H264_enc_single();
+
+            if (ret != ESP_H264_ERR_OK)
+            {
+                Serial.println("ENC process failed");
+            }
+            else
+            {
+                esp_h264_enc_out_frame_t *e_out_frame = enc.get_outframe();
+                uint32_t enc_pkt_len = e_out_frame->length;
+                uint8_t *enc_pkt = e_out_frame->raw_data.buffer;
+                uint32_t enc_dts = e_out_frame->dts; // need to look into this plz
+                uint32_t enc_pts = e_out_frame->pts; // need to look into this plz/i believe i can do this
+
+                Serial.print("Encoded bytes: ");
+                Serial.println((uint32_t)enc_pkt_len);
+
+                enc.close_H264_enc_single();
+
+                Serial.println("Decoder time! Oh boi.");
+                H264_DEC dec;
+                esp_h264_enc_cfg_t dec_cfg = dec.set_config_H264_dec_single(ESP_H264_RAW_FMT_I420, CAMERA_FPS, FRAMESIZE_HEIGHT, FRAMESIZE_WIDTH, BITRATE, QMIN, QMAX, GOP);
+                if (dec.init_H264_dec_single(dec_cfg) != ESP_H264_ERR_OK)
+                {
+                    Serial.println("DEC init failed");
+                }
+                else
+                {
+                    esp_h264_dec_in_frame_t *in_frame = dec.get_inframe();
+                    // use the true length not the buffer's length might be a bad choice but we can go with it.
+                    in_frame->raw_data.buffer = enc_pkt;
+                    in_frame->raw_data.len = enc_pkt_len;
+
+                    // other option that we can use:
+                    // in_frame->raw_data = e_out_frame->raw_data;
+
+                    in_frame->dts = enc_dts;
+                    in_frame->pts = enc_pts;
+
+                    Serial.println("Decoding while loop....");
+                    while (in_frame->raw_data.len)
+                    {
+                        esp_h264_err_t ret = dec.run_H264_dec_single();
+                        if (ret != ESP_H264_ERR_OK)
+                        {
+                            Serial.print("Error code: ");
+                            Serial.println(ret);
+                            break;
+                        }
+                        in_frame->raw_data.buffer += in_frame->consume;
+                        in_frame->raw_data.len -= in_frame->consume; // consume set by decoder as decoding happens
+                    }
+
+                    esp_h264_dec_out_frame_t *out_frame = dec.get_outframe();
+                    uint32_t out_yuv_len = out_frame->out_size;
+
+                    Serial.print("Decoded bytes: ");
+                    Serial.println((uint32_t)out_yuv_len);
+
+                    dec.close_H264_dec_single();
+                }
+            }
+        }
+#endif
+
         on_frame_ready(&my_trans);
         Serial.println("**DONE");
     }
