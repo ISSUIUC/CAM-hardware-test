@@ -541,7 +541,7 @@ void setup()
 
 #ifdef H264_ENCODER
 
-        Serial.println("Running H264 encode->decode test");
+        Serial.println("Running H264 encode");
 
         H264_ENC enc;
 
@@ -559,13 +559,19 @@ void setup()
             my_trans.buflen = received_frame_size;
             my_trans.received_size = received_frame_size;
 
+            Serial.print("1");
+
             esp_h264_enc_in_frame_t *in_frame = enc.get_inframe();
             esp_h264_pkt_t packet;
             packet.buffer = (uint8_t *)my_trans.buffer;
             packet.len = my_trans.buflen;
             in_frame->raw_data = packet;
+
+            Serial.print("1");
+
             in_frame->pts = (uint32_t)millis(); // TODO: idk how to set pts/if this is the right way... (might wanna look at esp_h264_enc_dual.cpp&.h)
             esp_h264_err_t ret = enc.run_H264_enc_single();
+
 
 
 
@@ -590,10 +596,16 @@ void setup()
                 }
             }
         }
+        else{
+            Serial.print("TIMEOUT: 10 Seconds...");
+        }
 #endif
 
         // on_frame_ready(&my_trans);
         Serial.println("**DONE");
+
+
+#endif
 }
     
 
@@ -612,7 +624,7 @@ void setup()
     // }
     // Serial.println("Received Frame");
 
-#endif
+
 
     // init_tasks();
 
