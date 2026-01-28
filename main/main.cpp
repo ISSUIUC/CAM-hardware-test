@@ -362,7 +362,7 @@ void setup()
     Serial.println("Enable CAM Ctlr");
 
     esp_err_t err2;
-    err2 = esp_cam_ctlr_enable(cam_handle); // enable high peripheral // no work
+    err2 = esp_cam_ctlr_enable(cam_handle); 
 
     if (err2 != ESP_OK)
     {
@@ -561,7 +561,7 @@ void setup()
 
 
 
-            Serial.print("1");
+            Serial.println("1");
 
             esp_h264_enc_in_frame_t *in_frame = enc.get_inframe();
             esp_h264_pkt_t packet;
@@ -569,11 +569,13 @@ void setup()
             packet.len = my_trans.buflen;
             in_frame->raw_data = packet;
 
-            Serial.print("1");
+            Serial.println("2");
 
             in_frame->pts = (uint32_t)millis(); // TODO: idk how to set pts/if this is the right way... (might wanna look at esp_h264_enc_dual.cpp&.h)
             esp_h264_err_t ret = enc.run_H264_enc_single();
 
+
+            Serial.println("3");
 
 
 
@@ -584,10 +586,16 @@ void setup()
             else
             {
                 esp_h264_enc_out_frame_t *e_out_frame = enc.get_outframe();
+
+                Serial.println(*(e_out_frame->raw_data.buffer));
+
+
                 uint32_t enc_pkt_len = e_out_frame->length;
                 uint8_t *enc_pkt = e_out_frame->raw_data.buffer;
                 uint32_t enc_dts = e_out_frame->dts; // need to look into this plz
                 uint32_t enc_pts = e_out_frame->pts; // need to look into this plz/i believe i can do this
+
+                Serial.println("4");
 
                 Serial.println("*FRAME");
 
@@ -598,13 +606,16 @@ void setup()
                 Serial.println((uint32_t)enc_pkt_len);
 
                 enc.close_H264_enc_single();
+
+
                 }
             }
+            #endif
         }
         else{
             Serial.print("TIMEOUT: 10 Seconds...");
         }
-#endif
+
 
         // on_frame_ready(&my_trans);
         Serial.println("**DONE");
