@@ -6,6 +6,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif 
+
 #include "esp_heap_caps.h"
 
 #define ESP_H264_MEM_INTERNAL MALLOC_CAP_INTERNAL
@@ -45,3 +49,8 @@ void *esp_h264_aligned_calloc(uint32_t alignment, uint32_t n, uint32_t size, uin
  *       - others  A pointer to the memory allocated on success
  */
 void *esp_h264_calloc_prefer(uint32_t n, uint32_t size, uint32_t *actual_size, uint32_t caps1, uint32_t caps2);
+
+#ifdef __cplusplus
+}
+#endif
+
