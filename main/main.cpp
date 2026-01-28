@@ -66,7 +66,7 @@ USBCDC USBSerial;
 
 // Convert Video Format from YUV422 to YUV420
 
-// #define VIDEO_CONVERSION_YUV
+#define VIDEO_CONVERSION_YUV
 
 // RHSoftwareSPI _rspi;
 // RH_RF24 radio(SI4463_CS, SI4463_INT, SI4463_SDN);
