@@ -559,6 +559,8 @@ void setup()
             my_trans.buflen = received_frame_size;
             my_trans.received_size = received_frame_size;
 
+
+
             Serial.print("1");
 
             esp_h264_enc_in_frame_t *in_frame = enc.get_inframe();
@@ -586,6 +588,9 @@ void setup()
                 uint8_t *enc_pkt = e_out_frame->raw_data.buffer;
                 uint32_t enc_dts = e_out_frame->dts; // need to look into this plz
                 uint32_t enc_pts = e_out_frame->pts; // need to look into this plz/i believe i can do this
+
+                Serial.println("*FRAME");
+
 
                 on_frame_ready_H264(&(e_out_frame->raw_data));
     
